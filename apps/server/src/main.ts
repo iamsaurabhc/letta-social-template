@@ -5,6 +5,9 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Add this line to ensure all routes are prefixed with /api
+  app.setGlobalPrefix('api');
+  
   app.useGlobalPipes(new ValidationPipe());
   
   app.enableCors({
@@ -28,5 +31,10 @@ async function bootstrap() {
   }
 }
 
-// For Vercel serverless functions
+// Export for serverless
 export default bootstrap;
+
+// Also keep this for local development
+if (require.main === module) {
+  bootstrap();
+}
