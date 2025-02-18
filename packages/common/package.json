@@ -1,0 +1,20 @@
+{
+    "name": "common",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "scripts": {
+      "build": "tsc",
+      "dev": "tsc -w",
+      "clean": "rm -rf dist"
+    },
+    "dependencies": {
+      "@supabase/supabase-js": "^2.39.7",
+      "@supabase/ssr": "^0.1.0"
+    },
+    "devDependencies": {
+      "typescript": "^5.3.3",
+      "@types/node": "^20.11.19"
+    }
+  }
