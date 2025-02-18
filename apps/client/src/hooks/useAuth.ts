@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { createSupabaseClient } from '@common/supabase/client';
 import { useRouter } from 'next/navigation';
 import api from '@/utils/api';
+import { User } from '@common/types/auth';
 
 export const useAuth = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createSupabaseClient();

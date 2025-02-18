@@ -21,7 +21,7 @@ export default function SignUpForm() {
       await signIn(email, password);
       
       router.push('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign up failed:', error);
       // Add more detailed error logging
       if (error.response) {
