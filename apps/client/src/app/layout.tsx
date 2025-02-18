@@ -1,5 +1,3 @@
-
-
 import AuthWrapper from '@/components/AuthWrapper';
 import { Inter } from 'next/font/google';
 
