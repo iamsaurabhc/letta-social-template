@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createSupabaseClient } from '@common/supabase/client';
 import { useRouter } from 'next/navigation';
-import { User } from '@common/types/auth';
+import api from '@/utils/api';
+
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createSupabaseClient();
@@ -20,13 +21,28 @@ export const useAuth = () => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const response = await api.post('/auth/signin', { email, password });
+      const { session } = response.data;
+      
+      if (session) {
+        await supabase.auth.setSession(session);
+        return session;
+      }
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    }
+  };
 
-    if (error) throw error;
-    return data;
+  const signUp = async (email: string, password: string) => {
+    try {
+      const response = await api.post('/auth/signup', { email, password });
+      return response.data;
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
   };
 
   const signOut = async () => {
@@ -38,6 +54,7 @@ export const useAuth = () => {
     user,
     loading,
     signIn,
+    signUp,
     signOut,
   };
 }; 

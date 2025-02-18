@@ -17,6 +17,8 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.3.3",
     "@supabase/supabase-js": "^2.39.7",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
     "common": "*",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
