@@ -14,14 +14,16 @@
       "src": "apps/server/dist/main.js",
       "use": "@vercel/node",
       "config": {
-        "workingDirectory": "apps/server"
+        "workingDirectory": "apps/server",
+        "maxLambdaSize": "50mb",
+        "includeFiles": ["dist/**"]
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "apps/server/dist/main.js",
+      "dest": "/apps/server/dist/main.js",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*",
@@ -32,8 +34,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "apps/client/$1",
-      "continue": true
+      "dest": "/apps/client/$1"
     }
   ]
 }

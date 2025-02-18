@@ -119,6 +119,9 @@ importers:
       common:
         specifier: '*'
         version: 0.2.5
+      express:
+        specifier: ^4.21.2
+        version: 4.21.2
       passport:
         specifier: ^0.7.0
         version: 0.7.0

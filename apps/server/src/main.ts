@@ -1,13 +1,18 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import * as express from 'express';
+
+const server = express();
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(server)
+  );
   
-  // Add this line to ensure all routes are prefixed with /api
   app.setGlobalPrefix('api');
-  
   app.useGlobalPipes(new ValidationPipe());
   
   app.enableCors({
@@ -21,21 +26,26 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     exposedHeaders: ['Authorization'],
   });
-  
-  // For Vercel serverless deployment
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
 
-  // Required for Vercel
-  if (process.env.VERCEL) {
-    console.log('Running on Vercel, listening on', port);
-  }
+  await app.init();
+  return app;
 }
 
-// Export for serverless
-export default bootstrap;
+let app: any;
 
-// Also keep this for local development
+export default async function handler(req: any, res: any) {
+  if (!app) {
+    app = await bootstrap();
+  }
+  server(req, res);
+}
+
+// For local development
 if (require.main === module) {
-  bootstrap();
+  bootstrap().then(app => {
+    const port = process.env.PORT || 3001;
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  });
 }
