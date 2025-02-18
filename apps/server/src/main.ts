@@ -11,6 +11,7 @@ async function bootstrap() {
       app = await NestFactory.create(AppModule);
       
       app.useGlobalPipes(new ValidationPipe());
+      app.setGlobalPrefix('api');
       app.enableCors({
         origin: [
           'http://localhost:3000',
@@ -38,6 +39,10 @@ export default async function handler(req, res) {
   try {
     if (!app) {
       app = await bootstrap();
+    }
+    
+    if (req.url.startsWith('/api')) {
+      req.url = req.url.replace('/api', '');
     }
     
     const instance = app.getHttpAdapter().getInstance();
