@@ -7,39 +7,43 @@ import { GlobalExceptionFilter } from './middleware/error.middleware';
 
 const server = express();
 const logger = new Logger('Bootstrap');
-let app: any;
+let app;
 
 async function bootstrap() {
-  if (!app) {
-    const app = await NestFactory.create(
-      AppModule,
-      new ExpressAdapter(server)
-    );
-    
-    app.useGlobalPipes(new ValidationPipe());
-    app.useGlobalFilters(new GlobalExceptionFilter());
-    
-    app.enableCors({
-      origin: [
-        'http://localhost:3000',
-        'https://*.vercel.app',
-        process.env.NEXT_PUBLIC_CLIENT_URL,
-      ],
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-      credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-      exposedHeaders: ['Authorization'],
-    });
+  try {
+    if (!app) {
+      app = await NestFactory.create(
+        AppModule,
+        new ExpressAdapter(server)
+      );
+      
+      app.useGlobalPipes(new ValidationPipe());
+      app.useGlobalFilters(new GlobalExceptionFilter());
+      
+      app.enableCors({
+        origin: [
+          'http://localhost:3000',
+          'https://*.vercel.app',
+          process.env.NEXT_PUBLIC_CLIENT_URL,
+        ],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+        exposedHeaders: ['Authorization'],
+      });
 
-    await app.init();
-    logger.log('NestJS application initialized');
+      await app.init();
+      logger.log('NestJS application initialized');
+    }
     return app;
+  } catch (error) {
+    logger.error('Failed to initialize NestJS application:', error);
+    throw error;
   }
-  return app;
 }
 
 // Vercel serverless handler
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   try {
     if (!app) {
       logger.log('Initializing NestJS application for serverless');
@@ -52,9 +56,7 @@ export default async function handler(req: any, res: any) {
       req.url = `/api${req.url}`;
     }
     
-    await new Promise((resolve) => {
-      server(req, res, resolve);
-    });
+    server(req, res);
   } catch (error) {
     logger.error('Error in serverless handler:', error);
     res.status(500).json({ 
@@ -70,7 +72,10 @@ if (require.main === module) {
   bootstrap().then(app => {
     const port = process.env.PORT || 3001;
     app.listen(port, () => {
-      logger.log(`Server running on port ${port}`);
+      logger.log(`Server listening on port ${port}`);
     });
+  }).catch(error => {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
   });
 }
