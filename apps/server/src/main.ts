@@ -47,6 +47,11 @@ export default async function handler(req: any, res: any) {
       logger.log('NestJS application initialized successfully');
     }
     
+    // Explicitly handle API routes
+    if (!req.url.startsWith('/api')) {
+      req.url = `/api${req.url}`;
+    }
+    
     await new Promise((resolve) => {
       server(req, res, resolve);
     });
