@@ -2,7 +2,7 @@
     "version": 2,
     "buildCommand": "node ../../setup-env.js && pnpm build",
     "installCommand": "pnpm install",
-    "outputDirectory": "apps/client/.next",
+    "outputDirectory": ".next",
     "builds": [
       {
         "src": "apps/client/next.config.js",
