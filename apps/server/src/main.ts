@@ -38,6 +38,10 @@ let app: any;
 
 export default async function handler(req: any, res: any) {
   try {
+    logger.log(`Request received: ${req.method} ${req.url}`);
+    logger.log(`Current directory: ${process.cwd()}`);
+    logger.log(`Files in current directory: ${require('fs').readdirSync('.')}`);
+    
     if (!app) {
       logger.log('Initializing NestJS application for serverless');
       app = await bootstrap();

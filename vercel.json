@@ -15,14 +15,15 @@
       "use": "@vercel/node",
       "config": {
         "workingDirectory": "apps/server",
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "outputDirectory": "dist"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/apps/server/dist/main.js",
+      "dest": "apps/server/dist/main.js",
       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*",
