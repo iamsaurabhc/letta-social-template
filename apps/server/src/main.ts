@@ -1,20 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import * as express from 'express';
 
-const server = express();
 const logger = new Logger('Bootstrap');
 let app;
 
 async function bootstrap() {
   try {
     if (!app) {
-      app = await NestFactory.create(
-        AppModule,
-        new ExpressAdapter(server)
-      );
+      app = await NestFactory.create(AppModule);
       
       app.useGlobalPipes(new ValidationPipe());
       app.enableCors({
@@ -46,7 +40,8 @@ export default async function handler(req, res) {
       app = await bootstrap();
     }
     
-    server(req, res);
+    const instance = app.getHttpAdapter().getInstance();
+    return instance(req, res);
   } catch (error) {
     logger.error('Error in serverless handler:', error);
     res.status(500).json({ 
