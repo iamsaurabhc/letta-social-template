@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     }
     
     if (req.url.startsWith('/api')) {
-      req.url = req.url.replace('/api', '');
+      req.url = req.url.replace('/api', '/');
     }
     
     const instance = app.getHttpAdapter().getInstance();
