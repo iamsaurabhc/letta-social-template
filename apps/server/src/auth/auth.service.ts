@@ -11,8 +11,9 @@ export class AuthService {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY');
 
-    this.logger.debug(`Supabase URL: ${supabaseUrl ? 'exists' : 'missing'}`);
-    this.logger.debug(`Supabase Key: ${supabaseKey ? 'exists' : 'missing'}`);
+    this.logger.debug(`Initializing Supabase client...`);
+    this.logger.debug(`URL exists: ${!!supabaseUrl}`);
+    this.logger.debug(`Key exists: ${!!supabaseKey}`);
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Supabase configuration is missing');

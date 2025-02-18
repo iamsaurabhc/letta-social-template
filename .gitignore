@@ -30,3 +30,7 @@ yarn-error.log*
 Thumbs.db
 
 .env.*
+# Environment
+.env
+.env.*
+!.env.example

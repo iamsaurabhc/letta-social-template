@@ -3,9 +3,10 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-      "dev": "pnpm build:common && pnpm --parallel -r dev",
+      "setup:env": "node setup-env.js",
+      "dev": "pnpm setup:env && pnpm build:common && pnpm --parallel -r dev",
       "build:common": "pnpm --filter common build",
-      "build": "pnpm --filter common build && pnpm --parallel --filter \"!common\" build",
+      "build": "pnpm setup:env && pnpm --filter common build && pnpm --parallel --filter \"!common\" build",
       "start": "pnpm --parallel -r start",
       "clean": "rm -rf node_modules **/node_modules",
       "install:clean": "pnpm clean && pnpm install",
