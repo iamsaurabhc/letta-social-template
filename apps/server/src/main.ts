@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as express from 'express';
-import { GlobalExceptionFilter } from './middleware/error.middleware';
 
 const server = express();
 const logger = new Logger('Bootstrap');
@@ -18,8 +17,6 @@ async function bootstrap() {
       );
       
       app.useGlobalPipes(new ValidationPipe());
-      app.useGlobalFilters(new GlobalExceptionFilter());
-      
       app.enableCors({
         origin: [
           'http://localhost:3000',
@@ -46,14 +43,7 @@ async function bootstrap() {
 export default async function handler(req, res) {
   try {
     if (!app) {
-      logger.log('Initializing NestJS application for serverless');
       app = await bootstrap();
-      logger.log('NestJS application initialized successfully');
-    }
-    
-    // Explicitly handle API routes
-    if (!req.url.startsWith('/api')) {
-      req.url = `/api${req.url}`;
     }
     
     server(req, res);

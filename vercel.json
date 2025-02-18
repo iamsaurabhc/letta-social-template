@@ -22,11 +22,11 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "apps/server/src/main.ts"
+      "dest": "/apps/server/src/main.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "apps/client/$1"
+      "dest": "/apps/client/$1"
     }
   ]
 }
