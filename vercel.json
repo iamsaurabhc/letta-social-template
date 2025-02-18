@@ -2,11 +2,13 @@
     "version": 2,
     "buildCommand": "node ../../setup-env.js && pnpm build",
     "installCommand": "pnpm install",
-    "outputDirectory": ".next",
     "builds": [
       {
         "src": "apps/client/next.config.js",
-        "use": "@vercel/next"
+        "use": "@vercel/next",
+        "config": {
+          "outputDirectory": "apps/client/.next"
+        }
       },
       {
         "src": "apps/server/src/main.ts",
@@ -16,11 +18,11 @@
     "routes": [
       {
         "src": "/api/(.*)",
-        "dest": "apps/server/src/main.ts"
+        "dest": "/apps/server/src/main.ts"
       },
       {
         "src": "/(.*)",
-        "dest": "apps/client/$1"
+        "dest": "/apps/client/$1"
       }
     ]
   }
