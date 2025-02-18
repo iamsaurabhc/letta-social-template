@@ -7,50 +7,56 @@ import { GlobalExceptionFilter } from './middleware/error.middleware';
 
 const server = express();
 const logger = new Logger('Bootstrap');
+let app: any;
 
 async function bootstrap() {
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(server)
-  );
-  
-  app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalFilters(new GlobalExceptionFilter());
-  
-  app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://*.vercel.app',
-      process.env.NEXT_PUBLIC_CLIENT_URL,
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['Authorization'],
-  });
+  if (!app) {
+    const app = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(server)
+    );
+    
+    app.useGlobalPipes(new ValidationPipe());
+    app.useGlobalFilters(new GlobalExceptionFilter());
+    
+    app.enableCors({
+      origin: [
+        'http://localhost:3000',
+        'https://*.vercel.app',
+        process.env.NEXT_PUBLIC_CLIENT_URL,
+      ],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+      exposedHeaders: ['Authorization'],
+    });
 
-  await app.init();
-  logger.log('NestJS application initialized');
+    await app.init();
+    logger.log('NestJS application initialized');
+    return app;
+  }
   return app;
 }
 
-let app: any;
-
+// Vercel serverless handler
 export default async function handler(req: any, res: any) {
   try {
-    logger.log(`Request received: ${req.method} ${req.url}`);
-    logger.log(`Current directory: ${process.cwd()}`);
-    logger.log(`Files in current directory: ${require('fs').readdirSync('.')}`);
-    
     if (!app) {
       logger.log('Initializing NestJS application for serverless');
       app = await bootstrap();
       logger.log('NestJS application initialized successfully');
     }
-    server(req, res);
+    
+    await new Promise((resolve) => {
+      server(req, res, resolve);
+    });
   } catch (error) {
     logger.error('Error in serverless handler:', error);
-    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 
