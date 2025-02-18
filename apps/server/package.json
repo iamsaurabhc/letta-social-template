@@ -5,7 +5,7 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "nest build",
-    "vercel-build": "nest build && mkdir -p /vercel/output/apps/server/dist && cp -r dist/* /vercel/output/apps/server/dist/ && cp package.json /vercel/output/apps/server/dist/",
+    "vercel-build": "nest build && mkdir -p /vercel/output && cp -r dist/* /vercel/output/ && cp package.json /vercel/output/",
     "dev": "nest start --watch",
     "start": "node dist/main",
     "test": "jest"
