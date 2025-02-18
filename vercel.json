@@ -15,8 +15,7 @@
       "use": "@vercel/node",
       "config": {
         "workingDirectory": "apps/server",
-        "maxLambdaSize": "50mb",
-        "includeFiles": ["dist/**"]
+        "maxLambdaSize": "50mb"
       }
     }
   ],

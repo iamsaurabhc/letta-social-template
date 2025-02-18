@@ -37,11 +37,17 @@ async function bootstrap() {
 let app: any;
 
 export default async function handler(req: any, res: any) {
-  if (!app) {
-    logger.log('Initializing NestJS application for serverless');
-    app = await bootstrap();
+  try {
+    if (!app) {
+      logger.log('Initializing NestJS application for serverless');
+      app = await bootstrap();
+      logger.log('NestJS application initialized successfully');
+    }
+    server(req, res);
+  } catch (error) {
+    logger.error('Error in serverless handler:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
-  server(req, res);
 }
 
 // For local development
