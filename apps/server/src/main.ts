@@ -14,6 +14,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'https://*.vercel.app',
+      process.env.NEXT_PUBLIC_CLIENT_URL,
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     credentials: true,
