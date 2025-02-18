@@ -34,3 +34,4 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!setup-env.js
