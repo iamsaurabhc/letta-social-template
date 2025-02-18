@@ -5,7 +5,6 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe());
   
   app.enableCors({
@@ -19,7 +18,15 @@ async function bootstrap() {
     exposedHeaders: ['Authorization'],
   });
   
-  await app.listen(3001);
+  // For Vercel serverless deployment
+  const port = process.env.PORT || 3001;
+  await app.listen(port);
+
+  // Required for Vercel
+  if (process.env.VERCEL) {
+    console.log('Running on Vercel, listening on', port);
+  }
 }
 
-bootstrap(); 
+// For Vercel serverless functions
+export default bootstrap;

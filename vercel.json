@@ -1,33 +1,31 @@
 {
-    "version": 2,
-    "buildCommand": "node setup-env.js && pnpm build",
-    "installCommand": "pnpm install",
-    "outputDirectory": "apps/client/.next",
-    "builds": [
-      {
-        "src": "apps/client/next.config.js",
-        "use": "@vercel/next",
-        "config": {
-          "workingDirectory": "apps/client",
-          "outputDirectory": ".next"
-        }
-      },
-      {
-        "src": "apps/server/src/main.ts",
-        "use": "@vercel/node",
-        "config": {
-          "workingDirectory": "apps/server"
-        }
+  "version": 2,
+  "buildCommand": "node setup-env.js && pnpm build && pnpm --filter server vercel-build",
+  "installCommand": "pnpm install",
+  "builds": [
+    {
+      "src": "apps/client/next.config.js",
+      "use": "@vercel/next",
+      "config": {
+        "workingDirectory": "apps/client"
       }
-    ],
-    "routes": [
-      {
-        "src": "/api/(.*)",
-        "dest": "/apps/server/src/main.ts"
-      },
-      {
-        "src": "/(.*)",
-        "dest": "/apps/client/$1"
+    },
+    {
+      "src": "apps/server/dist/main.js",
+      "use": "@vercel/node",
+      "config": {
+        "workingDirectory": "apps/server"
       }
-    ]
-  }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/apps/server/dist/main.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/apps/client/$1"
+    }
+  ]
+}
