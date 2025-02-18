@@ -1,6 +1,6 @@
 {
     "version": 2,
-    "buildCommand": "node apps/client/setup-env.js && pnpm build",
+    "buildCommand": "node setup-env.js && pnpm build",
     "installCommand": "pnpm install",
     "outputDirectory": "apps/client/.next",
     "builds": [
