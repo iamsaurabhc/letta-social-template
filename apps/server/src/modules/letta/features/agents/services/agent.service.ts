@@ -2,6 +2,8 @@ import { Injectable, Logger, InternalServerErrorException, NotFoundException } f
 import { ConfigService } from '@nestjs/config';
 import { LettaClient, LettaError } from '@letta-ai/letta-client';
 import { CreateAgentDto, UpdateAgentDto } from '../dto/agent.dto';
+import { CreateArchivalMemoryDto } from '../dto/archival-memory.dto';
+import { ModifyBlockDto } from '../dto/core-memory.dto';
 
 @Injectable()
 export class AgentService {
@@ -89,6 +91,127 @@ export class AgentService {
     try {
       this.logger.log(`Detaching source ${sourceId} from agent ${agentId}`);
       return await this.lettaClient.agents.sources.detach(agentId, sourceId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  // Tool Management
+  async getAgentTools(agentId: string) {
+    try {
+      this.logger.log(`Fetching tools for agent: ${agentId}`);
+      return await this.lettaClient.agents.tools.list(agentId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async attachToolToAgent(agentId: string, toolId: string) {
+    try {
+      this.logger.log(`Attaching tool ${toolId} to agent ${agentId}`);
+      return await this.lettaClient.agents.tools.attach(agentId, toolId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async detachToolFromAgent(agentId: string, toolId: string) {
+    try {
+      this.logger.log(`Detaching tool ${toolId} from agent ${agentId}`);
+      return await this.lettaClient.agents.tools.detach(agentId, toolId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  // Context Management
+  async getAgentContext(agentId: string) {
+    try {
+      this.logger.log(`Fetching context for agent: ${agentId}`);
+      return await this.lettaClient.agents.context.retrieve(agentId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  // Archival Memory Management
+  async getAgentArchivalMemories(agentId: string) {
+    try {
+      this.logger.log(`Fetching archival memories for agent: ${agentId}`);
+      return await this.lettaClient.agents.archivalMemory.list(agentId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async createAgentArchivalMemory(agentId: string, memoryData: CreateArchivalMemoryDto) {
+    try {
+      this.logger.log(`Creating archival memory for agent: ${agentId}`);
+      return await this.lettaClient.agents.archivalMemory.create(agentId, memoryData);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async deleteAgentArchivalMemory(agentId: string, memoryId: string) {
+    try {
+      this.logger.log(`Deleting archival memory ${memoryId} from agent ${agentId}`);
+      return await this.lettaClient.agents.archivalMemory.delete(agentId, memoryId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  // Core Memory Management
+  async getAgentCoreMemory(agentId: string) {
+    try {
+      this.logger.log(`Fetching core memory for agent: ${agentId}`);
+      return await this.lettaClient.agents.coreMemory.retrieve(agentId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async getAgentCoreMemoryBlock(agentId: string, blockLabel: string) {
+    try {
+      this.logger.log(`Fetching core memory block ${blockLabel} for agent: ${agentId}`);
+      return await this.lettaClient.agents.coreMemory.retrieveBlock(agentId, blockLabel);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async updateAgentCoreMemoryBlock(agentId: string, blockLabel: string, blockData: ModifyBlockDto) {
+    try {
+      this.logger.log(`Updating core memory block ${blockLabel} for agent: ${agentId}`);
+      return await this.lettaClient.agents.coreMemory.modifyBlock(agentId, blockLabel, blockData);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async getAgentCoreMemoryBlocks(agentId: string) {
+    try {
+      this.logger.log(`Fetching core memory blocks for agent: ${agentId}`);
+      return await this.lettaClient.agents.coreMemory.listBlocks(agentId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async attachBlockToCoreMemory(agentId: string, blockId: string) {
+    try {
+      this.logger.log(`Attaching block ${blockId} to agent ${agentId} core memory`);
+      return await this.lettaClient.agents.coreMemory.attachBlock(agentId, blockId);
+    } catch (error) {
+      this.handleLettaError(error);
+    }
+  }
+
+  async detachBlockFromCoreMemory(agentId: string, blockId: string) {
+    try {
+      this.logger.log(`Detaching block ${blockId} from agent ${agentId} core memory`);
+      return await this.lettaClient.agents.coreMemory.detachBlock(agentId, blockId);
     } catch (error) {
       this.handleLettaError(error);
     }
