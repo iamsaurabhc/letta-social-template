@@ -9,6 +9,12 @@ export class TwitterPostService {
 
   constructor(private readonly twitterApiService: TwitterApiService) {}
 
+  /**
+   * Retrieves tweets for the authenticated user
+   * @param auth - Twitter authentication credentials
+   * @returns List of tweets with their creation date and public metrics
+   * @see Reference implementation in old_twitter.ts (lines 107-127)
+   */
   async getPosts(auth: TwitterAuth) {
     this.logger.log('Fetching Twitter posts');
     const userId = await this.getUserId(auth);
@@ -19,6 +25,13 @@ export class TwitterPostService {
     );
   }
 
+  /**
+   * Creates a new tweet, optionally with media
+   * @param auth - Twitter authentication credentials
+   * @param postData - Object containing tweet text and optional media ID
+   * @returns The created tweet data
+   * @see Reference implementation in old_twitter.ts (lines 169-191)
+   */
   async createPost(auth: TwitterAuth, postData: { text: string; mediaId?: string }) {
     this.logger.log('Creating Twitter post');
     const body = postData.mediaId 
@@ -35,12 +48,26 @@ export class TwitterPostService {
     );
   }
 
+  /**
+   * Creates a tweet with an attached media file
+   * @param auth - Twitter authentication credentials
+   * @param text - Tweet text content
+   * @param file - Media file buffer to upload
+   * @returns The created tweet data
+   * @see Reference implementation in old_twitter.ts (lines 169-191)
+   */
   async createPostWithMedia(auth: TwitterAuth, text: string, file: Buffer) {
     this.logger.log('Creating Twitter post with media');
     const mediaId = await this.uploadMedia(auth, file);
     return this.createPost(auth, { text, mediaId });
   }
 
+  /**
+   * Gets detailed information about a specific tweet
+   * @param auth - Twitter authentication credentials
+   * @param tweetId - ID of the tweet to fetch
+   * @returns Detailed tweet data including metrics and attachments
+   */
   async getTweetDetails(auth: TwitterAuth, tweetId: string) {
     this.logger.log(`Fetching tweet details: ${tweetId}`);
     return this.twitterApiService.makeTwitterRequest(
@@ -50,6 +77,12 @@ export class TwitterPostService {
     );
   }
 
+  /**
+   * Retrieves replies for a specific tweet
+   * @param auth - Twitter authentication credentials
+   * @param tweetId - ID of the tweet to fetch replies for
+   * @returns List of replies to the specified tweet
+   */
   async getTweetReplies(auth: TwitterAuth, tweetId: string) {
     this.logger.log(`Fetching replies for tweet: ${tweetId}`);
     return this.twitterApiService.makeTwitterRequest(
@@ -59,6 +92,13 @@ export class TwitterPostService {
     );
   }
 
+  /**
+   * Posts a reply to an existing tweet
+   * @param auth - Twitter authentication credentials
+   * @param tweetId - ID of the tweet to reply to
+   * @param text - Reply text content
+   * @returns The created reply tweet data
+   */
   async replyToTweet(auth: TwitterAuth, tweetId: string, text: string) {
     this.logger.log(`Replying to tweet: ${tweetId}`);
     return this.twitterApiService.makeTwitterRequest(
@@ -74,6 +114,12 @@ export class TwitterPostService {
     );
   }
 
+  /**
+   * Deletes a tweet
+   * @param auth - Twitter authentication credentials
+   * @param id - ID of the tweet to delete
+   * @returns The deleted tweet data
+   */
   async deletePost(auth: TwitterAuth, id: string) {
     this.logger.log(`Deleting Twitter post: ${id}`);
     return this.twitterApiService.makeTwitterRequest(
@@ -83,6 +129,14 @@ export class TwitterPostService {
     );
   }
 
+  /**
+   * Uploads media to Twitter for use in tweets
+   * @param auth - Twitter authentication credentials
+   * @param file - Media file buffer to upload
+   * @returns Media ID string for use in tweet creation
+   * @private
+   * @see Reference implementation in old_twitter.ts (lines 130-164)
+   */
   private async uploadMedia(auth: TwitterAuth, file: Buffer) {
     this.logger.log('Uploading media to Twitter');
     
@@ -110,6 +164,12 @@ export class TwitterPostService {
     return response.data.media_id_string;
   }
 
+  /**
+   * Gets the authenticated user's Twitter ID
+   * @param auth - Twitter authentication credentials
+   * @returns The user's Twitter ID
+   * @private
+   */
   private async getUserId(auth: TwitterAuth): Promise<string> {
     const response = await this.twitterApiService.makeTwitterRequest<{ id: string }>(
       '/users/me',
