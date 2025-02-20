@@ -20,6 +20,14 @@ export class CreateAgentDto {
   @IsEnum(AgentType)
   @IsOptional()
   agentType?: AgentType;
+
+  @IsString()
+  @IsOptional()
+  model?: string;
+
+  @IsString()
+  @IsOptional()
+  embedding?: string;
 }
 
 export class UpdateAgentDto {

@@ -1,21 +1,14 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LettaClient, LettaError } from '@letta-ai/letta-client';
 import { createReadStream } from 'fs';
 import { ReadStream } from 'fs';
+import { BaseService } from '../../../services/base.service';
+import { LettaError } from '@letta-ai/letta-client';
 
 @Injectable()
-export class SourceFileService {
-  private readonly logger = new Logger(SourceFileService.name);
-  private readonly lettaClient: LettaClient;
-
-  constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('LETTA_API_KEY');
-    if (!apiKey) {
-      throw new Error('LETTA_API_KEY is not configured');
-    }
-    
-    this.lettaClient = new LettaClient({ token: apiKey });
+export class SourceFileService extends BaseService {
+  constructor(configService: ConfigService) {
+    super(SourceFileService.name, configService);
   }
 
   async uploadFile(file: Express.Multer.File, sourceId: string) {

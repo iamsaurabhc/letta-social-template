@@ -2,19 +2,12 @@ import { Injectable, Logger, InternalServerErrorException, NotFoundException } f
 import { ConfigService } from '@nestjs/config';
 import { LettaClient, LettaError } from '@letta-ai/letta-client';
 import { CreateToolDto, UpdateToolDto, RunToolDto } from '../dto/tool.dto';
+import { BaseService } from '../../../services/base.service';
 
 @Injectable()
-export class ToolService {
-  private readonly logger = new Logger(ToolService.name);
-  private readonly lettaClient: LettaClient;
-
-  constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('LETTA_API_KEY');
-    if (!apiKey) {
-      throw new Error('LETTA_API_KEY is not configured');
-    }
-    
-    this.lettaClient = new LettaClient({ token: apiKey });
+export class ToolService extends BaseService {
+  constructor(configService: ConfigService) {
+    super(ToolService.name, configService);
   }
 
   async getTools() {

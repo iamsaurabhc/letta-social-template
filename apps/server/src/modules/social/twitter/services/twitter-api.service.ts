@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OAuth from 'oauth-1.0a';
+import * as OAuth from 'oauth-1.0a';
 import crypto from 'crypto';
 import { TwitterAuth, TwitterResponse } from '../interfaces/twitter.interface';
 
 @Injectable()
 export class TwitterApiService {
   private readonly logger = new Logger(TwitterApiService.name);
-  private readonly oauth: OAuth;
   private readonly TWITTER_API_BASE = 'https://api.twitter.com/2';
   private readonly TWITTER_UPLOAD_API_BASE = 'https://upload.twitter.com/1.1';
+  private readonly oauth: OAuth;
 
   constructor(private readonly configService: ConfigService) {
     this.oauth = new OAuth({
@@ -18,7 +18,7 @@ export class TwitterApiService {
         secret: this.configService.get<string>('TWITTER_CONSUMER_SECRET'),
       },
       signature_method: 'HMAC-SHA1',
-      hash_function(baseString, key) {
+      hash_function(baseString: string, key: string) {
         return crypto
           .createHmac('sha1', key)
           .update(baseString)
