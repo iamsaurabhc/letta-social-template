@@ -2,7 +2,8 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Sidebar } from '@/components/dashboard/Sidebar';
 
 export default function DashboardLayout({
   children,
@@ -11,14 +12,16 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  if (!isMounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -26,5 +29,19 @@ export default function DashboardLayout({
     );
   }
 
-  return user ? <>{children}</> : null;
-} 
+  return (
+    <div className="h-screen lg:grid lg:grid-cols-[280px_1fr] overflow-hidden">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block h-screen">
+        <Sidebar />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-col h-screen overflow-auto">
+        <main className="flex-1 p-4">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
