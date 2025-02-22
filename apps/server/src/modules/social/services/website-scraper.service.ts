@@ -13,11 +13,27 @@ export class WebsiteScraperService {
   ) {}
 
   async queueWebsiteScraping(agentId: string, websiteUrl: string, lettaAgentId: string) {
-    await this.scrapingQueue.add('scrape-website', {
-      agentId,
-      websiteUrl,
-      lettaAgentId
-    });
+    try {
+      this.logger.log(`Queueing scraping job for agent ${agentId}`);
+      
+      const job = await this.scrapingQueue.add('scrape-website', {
+        agentId,
+        websiteUrl,
+        lettaAgentId
+      }, {
+        timeout: 5000, // 5 second timeout
+        attempts: 3,   // Retry 3 times
+        removeOnComplete: true,
+        removeOnFail: true
+      });
+      
+      this.logger.log(`Scraping job queued successfully: ${job.id}`);
+      return job.id;
+    } catch (error) {
+      this.logger.error('Failed to queue website scraping:', error);
+      // Don't block the agent creation if scraping queue fails
+      return null;
+    }
   }
 
   async scrapeWebsite(websiteUrl: string) {
