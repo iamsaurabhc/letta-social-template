@@ -5,6 +5,7 @@ import { AgentService } from '../../letta/features/agents/services/agent.service
 import { CreateUserAgentDto } from '../dto/user-agent.dto';
 import { WebsiteScraperService } from './website-scraper.service';
 import { AgentType } from '@letta-ai/letta-client/api';
+import { BlockService } from '../../letta/features/blocks/services/block.service';
 
 @Injectable()
 export class UserAgentService {
@@ -14,7 +15,8 @@ export class UserAgentService {
   constructor(
     private configService: ConfigService,
     private lettaAgentService: AgentService,
-    private websiteScraperService: WebsiteScraperService
+    private websiteScraperService: WebsiteScraperService,
+    private blockService: BlockService
   ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY');
@@ -38,7 +40,25 @@ export class UserAgentService {
         isPublic: false
       });
 
-      // 2. Create user agent in Supabase with Letta agent ID
+      // 2. Create a block with agent preferences
+      const block = await this.blockService.createBlock({
+        value: JSON.stringify({
+          industry: data.industry,
+          targetAudience: data.targetAudience,
+          brandPersonality: data.brandPersonality,
+          contentPreferences: data.contentPreferences
+        }),
+        label: 'agent_preferences',
+        limit: 1 // Only one preferences block needed
+      });
+
+      // 3. Attach the block to agent's core memory
+      await this.lettaAgentService.attachBlockToCoreMemory(
+        lettaAgent.id,
+        block.id
+      );
+
+      // 4. Create user agent in Supabase with Letta agent ID
       const { data: agent, error } = await this.supabase
         .from('user_agents')
         .insert({
@@ -57,7 +77,7 @@ export class UserAgentService {
 
       if (error) throw error;
 
-      // 3. If website URL provided, scrape and update both Supabase and Letta
+      // 5. If website URL provided, scrape and update both Supabase and Letta
       if (data.websiteUrl) {
         // Queue the scraping job which will handle both updates
         await this.websiteScraperService.queueWebsiteScraping(
@@ -124,20 +144,46 @@ export class UserAgentService {
   }
 
   private generateSystemPrompt(data: CreateUserAgentDto): string {
-    return `You are a social media expert managing content for ${data.name}.
+    const brandPersonalityTraits = data.brandPersonality.map(trait => `- ${trait}`).join('\n');
+    const industryContext = data.industry.map(ind => `- ${ind}`).join('\n');
+    const audienceSegments = data.targetAudience.map(audience => `- ${audience}`).join('\n');
 
-    Industry: ${data.industry.join(', ')}
-    Target Audience: ${data.targetAudience.join(', ')}
-    Brand Personality: ${data.brandPersonality.join(', ')}
+    return `You are an AI social media expert managing content for ${data.name}.
 
-    Your role is to create engaging social media content that:
-    1. Reflects the brand's personality traits
-    2. Resonates with the target audience
-    3. Provides value within the industry context
-    4. Maintains a consistent voice across all platforms
+    BRAND PROFILE:
+    ${data.description ? `Description: ${data.description}\n` : ''}
+    Industry Focus:
+    ${industryContext}
 
-    ${data.description ? `Additional Context: ${data.description}` : ''}
+    Target Audience Segments:
+    ${audienceSegments}
 
-    Always ensure content is professional, engaging, and aligned with the brand's values.`;
+    Brand Personality Traits:
+    ${brandPersonalityTraits}
+
+    ROLE AND RESPONSIBILITIES:
+    1. Create engaging social media content that:
+    - Embodies each brand personality trait
+    - Speaks directly to defined target audience segments
+    - Demonstrates industry expertise and authority
+    - Maintains consistent brand voice across platforms
+
+    2. Content Guidelines:
+    - Adapt tone and style to match brand personality
+    - Use industry-specific terminology appropriately
+    - Address audience pain points and interests
+    - Create platform-specific content formats
+
+    3. Content Strategy:
+    - Balance educational, promotional, and engaging content
+    - Incorporate industry trends and news
+    - Maintain brand voice consistency
+    - Focus on audience value and engagement
+
+    Always ensure all content aligns with:
+    - Brand personality traits
+    - Target audience preferences
+    - Industry context and standards
+    - Platform-specific best practices`;
   }
 } 
