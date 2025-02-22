@@ -6,6 +6,7 @@ import { UserAgentService } from './services/user-agent.service';
 import { WebsiteScraperService } from './services/website-scraper.service';
 import { WebsiteScraperProcessor } from './processors/website-scraper.processor';
 import { BullModule } from '@nestjs/bull';
+import { LettaModule } from '../../modules/letta/letta.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { BullModule } from '@nestjs/bull';
     BullModule.registerQueue({
       name: 'website-scraping',
     }),
+    LettaModule
   ],
   controllers: [UserAgentController],
   providers: [

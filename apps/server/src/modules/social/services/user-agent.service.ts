@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
+import { AgentService } from '../../letta/features/agents/services/agent.service';
 import { CreateUserAgentDto } from '../dto/user-agent.dto';
 import { WebsiteScraperService } from './website-scraper.service';
+import { AgentType } from '@letta-ai/letta-client/api';
 
 @Injectable()
 export class UserAgentService {
@@ -11,6 +13,7 @@ export class UserAgentService {
 
   constructor(
     private configService: ConfigService,
+    private lettaAgentService: AgentService,
     private websiteScraperService: WebsiteScraperService
   ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
@@ -25,6 +28,17 @@ export class UserAgentService {
 
   async createUserAgent(userId: string, data: CreateUserAgentDto) {
     try {
+      // First create the Letta agent
+      const systemPrompt = this.generateSystemPrompt(data);
+      const lettaAgent = await this.lettaAgentService.createAgent({
+        name: data.name,
+        description: data.description,
+        systemPrompt,
+        agentType: AgentType.SOCIAL,
+        isPublic: false
+      });
+
+      // Then create the user agent in Supabase
       const { data: agent, error } = await this.supabase
         .from('user_agents')
         .insert({
@@ -36,7 +50,7 @@ export class UserAgentService {
           target_audience: data.targetAudience.join(', '),
           brand_personality: data.brandPersonality,
           content_preferences: data.contentPreferences,
-          letta_agent_id: '' // This will be updated later when Letta agent is created
+          letta_agent_id: lettaAgent.id
         })
         .select()
         .single();
@@ -53,6 +67,22 @@ export class UserAgentService {
       this.logger.error('Error creating user agent:', error);
       throw error;
     }
+  }
+
+  private generateSystemPrompt(data: CreateUserAgentDto): string {
+    return `You are a social media expert managing content for ${data.name}.
+
+Industry: ${data.industry.join(', ')}
+Target Audience: ${data.targetAudience.join(', ')}
+Brand Personality: ${data.brandPersonality.join(', ')}
+
+Your role is to create engaging social media content that:
+1. Reflects the brand's personality traits
+2. Resonates with the target audience
+3. Provides value within the industry context
+4. Maintains a consistent voice across all platforms
+
+Always ensure content is professional, engaging, and aligned with the brand's values.`;
   }
 
   async updateAgentWithScrapedData(agentId: string, scrapedData: any) {
