@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SocialConnection } from "../types";
 import {
   Card,
@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useSearchParams, useRouter } from "next/navigation";
+import api from "@/utils/api";
 
 interface Props {
   onNext: (data: { connections: SocialConnection[], inspirationUrls: string[] }) => void;
@@ -25,15 +27,59 @@ const PLATFORMS = [
 ] as const;
 
 export default function LinkSocial({ onNext }: Props) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
 
+  useEffect(() => {
+    // Check for auth callback status and twitterData
+    const status = searchParams.get('status');
+    const step = searchParams.get('step');
+    const twitterData = searchParams.get('twitterData');
+
+    if (twitterData) {
+      try {
+        const parsedData = JSON.parse(twitterData);
+        // Remove the twitterData from the URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('twitterData');
+        router.replace(newUrl.toString());
+        
+        // Fetch updated connections after successful auth
+        fetchConnections();
+      } catch (error) {
+        console.error('Failed to parse Twitter data:', error);
+      }
+    } else if (step === 'social' && status === 'success') {
+      fetchConnections();
+    }
+  }, [searchParams]);
+
+  const fetchConnections = async () => {
+    try {
+      const response = await api.get('/social/connections');
+      setConnections(response.data);
+    } catch (error) {
+      console.error('Failed to fetch connections:', error);
+    }
+  };
+
   const handleTwitterAuth = async () => {
-    // Store current URL to return to after auth
-    sessionStorage.setItem('returnTo', window.location.href);
-    
-    // Redirect to Twitter auth endpoint
-    window.location.href = '/api/auth/twitter';
+    try {
+      const response = await api.get('/social/twitter/auth/url');
+      if (response.data?.url) {
+        // Store current state before redirecting
+        localStorage.setItem('twitter_auth_pending', 'true');
+        
+        // Redirect to Twitter auth page
+        window.location.href = response.data.url;
+      } else {
+        console.error('No URL returned from auth endpoint');
+      }
+    } catch (error) {
+      console.error('Failed to get auth URL:', error);
+    }
   };
 
   const isConnected = (platform: string) => {

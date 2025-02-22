@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nes
 import { BlockService } from '../services/block.service';
 import { JwtAuthGuard } from '../../../../../auth/guards/jwt.guard';
 import { CreateBlockDto, UpdateBlockDto } from '../dto/block.dto';
+import { Letta } from '@letta-ai/letta-client';
 
 @Controller('letta/blocks')
 @UseGuards(JwtAuthGuard)
@@ -24,7 +25,7 @@ export class BlockController {
   }
 
   @Put(':id')
-  async updateBlock(@Param('id') id: string, @Body() blockData: UpdateBlockDto) {
+  async updateBlock(@Param('id') id: string, @Body() blockData: Letta.CreateBlock) {
     return this.blockService.updateBlock(id, blockData);
   }
 

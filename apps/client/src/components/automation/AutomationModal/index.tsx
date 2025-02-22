@@ -8,12 +8,14 @@ import CreateTrigger from './steps/CreateTrigger';
 
 export function AutomationModal({
   isOpen,
-  onClose
+  onClose,
+  initialStep = 'agent'
 }: {
   isOpen: boolean;
   onClose: () => void;
+  initialStep?: 'agent' | 'social' | 'trigger';
 }) {
-  const [currentStep, setCurrentStep] = useState('agent');
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [stepData, setStepData] = useState<AutomationStepData>({
     agent: null,
     socialConnections: [],

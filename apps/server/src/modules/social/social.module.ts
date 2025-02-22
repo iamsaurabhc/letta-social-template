@@ -7,6 +7,10 @@ import { WebsiteScraperService } from './services/website-scraper.service';
 import { WebsiteScraperProcessor } from './processors/website-scraper.processor';
 import { BullModule } from '@nestjs/bull';
 import { LettaModule } from '../../modules/letta/letta.module';
+import { SupabaseModule } from '../../supabase/supabase.module';
+import { TwitterAuthController } from './twitter/controllers/auth.controller';
+import { TwitterAuthService } from './twitter/services/auth.service';
+import { TwitterApiService } from './twitter/services/twitter-api.service';
 
 @Module({
   imports: [
@@ -15,13 +19,19 @@ import { LettaModule } from '../../modules/letta/letta.module';
     BullModule.registerQueue({
       name: 'website-scraping',
     }),
-    LettaModule
+    LettaModule,
+    SupabaseModule
   ],
-  controllers: [UserAgentController],
+  controllers: [
+    UserAgentController,
+    TwitterAuthController
+  ],
   providers: [
     UserAgentService,
     WebsiteScraperService,
-    WebsiteScraperProcessor
+    WebsiteScraperProcessor,
+    TwitterAuthService,
+    TwitterApiService
   ],
   exports: [
     TwitterModule,

@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, Res, UseGuards, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../../../../auth/guards/jwt.guard';
@@ -19,15 +19,20 @@ interface AuthenticatedRequest {
 
 @Controller('social/twitter/auth')
 export class TwitterAuthController {
+  private readonly logger = new Logger(TwitterAuthController.name);
+  
   constructor(
     private readonly configService: ConfigService,
     private readonly twitterAuthService: TwitterAuthService,
   ) {}
 
-  @Get()
-  async initiateAuth(@Res() response: Response) {
+  @Get('url')
+  @UseGuards(JwtAuthGuard)
+  async getAuthUrl() {
+    this.logger.debug('Getting Twitter auth URL');
     const authUrl = await this.twitterAuthService.getAuthorizationUrl();
-    return response.redirect(authUrl);
+    this.logger.debug(`Auth URL generated: ${authUrl}`);
+    return { url: authUrl };
   }
 
   @Get('callback')
@@ -39,19 +44,19 @@ export class TwitterAuthController {
     const { oauth_token, oauth_verifier } = request.query;
     
     try {
-      await this.twitterAuthService.handleCallback(
+      const twitterData = await this.twitterAuthService.handleCallback(
         request.user.id,
         oauth_token as string,
         oauth_verifier as string
       );
       
-      // Redirect back to the app
-      const appUrl = this.configService.get('APP_URL');
-      return response.redirect(`${appUrl}/automation?step=social&status=success`);
+      const clientUrl = this.configService.get('CLIENT_URL');
+      const encodedData = encodeURIComponent(JSON.stringify(twitterData));
+      return response.redirect(`${clientUrl}/dashboard?step=social&status=success&twitterData=${encodedData}`);
     } catch (error) {
       console.error('Twitter auth error:', error);
-      const appUrl = this.configService.get('APP_URL');
-      return response.redirect(`${appUrl}/automation?step=social&status=error`);
+      const clientUrl = this.configService.get('CLIENT_URL');
+      return response.redirect(`${clientUrl}/dashboard?step=social&status=error`);
     }
   }
 } 

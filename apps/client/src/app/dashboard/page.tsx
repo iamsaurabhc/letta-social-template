@@ -2,12 +2,40 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Users, Share2, Zap, PlusCircle } from "lucide-react";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { AutomationModal } from "@/components/automation/AutomationModal";
+import { AutomationStatus } from "@/components/automation/AutomationStatus";
+import api from '@/utils/api';
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [incompleteAutomations, setIncompleteAutomations] = useState<{
+    agentName: string;
+    hasSocialConnections: boolean;
+    hasTriggers: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchAutomationStatus = async () => {
+      try {
+        const response = await api.get('/social/agents/status');
+        const { data } = response;
+        
+        if (data.incompleteAgent) {
+          setIncompleteAutomations({
+            agentName: data.incompleteAgent.name,
+            hasSocialConnections: data.incompleteAgent.hasSocialConnections,
+            hasTriggers: data.incompleteAgent.hasTriggers
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch automation status:', error);
+      }
+    };
+
+    fetchAutomationStatus();
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -21,6 +49,11 @@ export default function DashboardPage() {
           Add Automation
         </Button>
       </div>
+
+      {incompleteAutomations && (
+        <AutomationStatus {...incompleteAutomations} />
+      )}
+
       <AutomationModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

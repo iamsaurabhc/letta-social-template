@@ -1,19 +1,28 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
+import { User } from '../../../auth/decorators/user.decorator';
 import { UserAgentService } from '../services/user-agent.service';
 import { CreateUserAgentDto } from '../dto/user-agent.dto';
-import { User } from '../../../auth/decorators/user.decorator';
+import { SupabaseService } from '../../../supabase/supabase.service';
 
 @Controller('social/agents')
 @UseGuards(JwtAuthGuard)
 export class UserAgentController {
-  constructor(private readonly userAgentService: UserAgentService) {}
+  constructor(
+    private readonly userAgentService: UserAgentService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   @Post()
-  async createAgent(
+  async create(
     @User('sub') userId: string,
-    @Body() agentData: CreateUserAgentDto
+    @Body() createUserAgentDto: CreateUserAgentDto,
   ) {
-    return this.userAgentService.createUserAgent(userId, agentData);
+    return this.userAgentService.createUserAgent(userId, createUserAgentDto);
+  }
+
+  @Get('status')
+  async getStatus(@User('sub') userId: string) {
+    return this.supabaseService.getAgentStatus(userId);
   }
 } 
