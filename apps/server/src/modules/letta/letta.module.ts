@@ -7,6 +7,8 @@ import { SourceFileController } from './features/sources/controllers/source-file
 import { SourceFileService } from './features/sources/services/source-file.service';
 import { ToolController } from './features/tools/controllers/tool.controller';
 import { ToolService } from './features/tools/services/tool.service';
+import { BlockModule } from './features/blocks/block.module';
+import { AgentModule } from './features/agents/agent.module';
 
 @Module({
   controllers: [
@@ -21,11 +23,14 @@ import { ToolService } from './features/tools/services/tool.service';
     SourceFileService,
     ToolService
   ],
+  imports: [BlockModule, AgentModule],
   exports: [
     AgentService,
     SourceService,
     SourceFileService,
-    ToolService
+    ToolService,
+    BlockModule,
+    AgentModule
   ]
 })
 export class LettaModule {}

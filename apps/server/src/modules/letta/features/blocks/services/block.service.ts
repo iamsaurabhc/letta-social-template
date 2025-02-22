@@ -1,6 +1,6 @@
 import { Injectable, Logger, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LettaClient, LettaError } from '@letta-ai/letta-client';
+import { Letta, LettaClient, LettaError } from '@letta-ai/letta-client';
 import { CreateBlockDto, UpdateBlockDto } from '../dto/block.dto';
 import { BaseService } from '../../../services/base.service';
 
@@ -28,16 +28,29 @@ export class BlockService extends BaseService {
     }
   }
 
-  async createBlock(blockData: CreateBlockDto) {
+  async createBlock(blockData: Letta.CreateBlock) {
     try {
       this.logger.log('Creating new block in Letta');
+      this.logger.debug('Block data:', {
+        label: blockData.label,
+        valueLength: blockData.value.length,
+        description: blockData.description
+      });
+      
       return await this.lettaClient.blocks.create(blockData);
     } catch (error) {
+      this.logger.error('Failed to create block:', {
+        error,
+        blockData: {
+          label: blockData.label,
+          valueLength: blockData.value.length
+        }
+      });
       this.handleLettaError(error);
     }
   }
 
-  async updateBlock(id: string, blockData: UpdateBlockDto) {
+  async updateBlock(id: string, blockData: Letta.CreateBlock) {
     try {
       this.logger.log(`Updating block: ${id}`);
       return await this.lettaClient.blocks.modify(id, blockData);

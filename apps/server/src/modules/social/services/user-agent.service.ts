@@ -30,7 +30,11 @@ export class UserAgentService {
 
   async createUserAgent(userId: string, data: CreateUserAgentDto) {
     try {
-      // 1. First create the Letta agent with comprehensive system prompt
+      this.logger.log('Starting user agent creation process');
+      this.logger.debug('Input data:', data);
+
+      // 1. First create the Letta agent
+      this.logger.log('Creating Letta agent...');
       const systemPrompt = this.generateSystemPrompt(data);
       const lettaAgent = await this.lettaAgentService.createAgent({
         name: data.name,
@@ -39,18 +43,25 @@ export class UserAgentService {
         agentType: AgentType.MemgptAgent,
         isPublic: false
       });
+      this.logger.log('Letta agent created successfully:', lettaAgent.id);
 
-      // 2. Create a block with agent preferences
+      // 2. Create a block with agent preferences - FIXING THE LIMIT ISSUE
+      this.logger.log('Creating preferences block...');
+      const preferencesData = {
+        industry: data.industry,
+        targetAudience: data.targetAudience,
+        brandPersonality: data.brandPersonality,
+        contentPreferences: data.contentPreferences
+      };
+      this.logger.debug('Preferences data:', preferencesData);
+      
       const block = await this.blockService.createBlock({
-        value: JSON.stringify({
-          industry: data.industry,
-          targetAudience: data.targetAudience,
-          brandPersonality: data.brandPersonality,
-          contentPreferences: data.contentPreferences
-        }),
+        value: JSON.stringify(preferencesData),
         label: 'agent_preferences',
-        limit: 1 // Only one preferences block needed
+        // Remove the limit parameter as it's causing the error
+        description: 'Agent preferences and configuration'
       });
+      this.logger.log('Preferences block created successfully:', block.id);
 
       // 3. Attach the block to agent's core memory
       await this.lettaAgentService.attachBlockToCoreMemory(
