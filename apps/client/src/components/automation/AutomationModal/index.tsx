@@ -1,10 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CreateAgent from './steps/CreateAgent';
-import LinkSocial from './steps/LinkSocial';
-import CreateTrigger from './steps/CreateTrigger';
 import { useState } from 'react';
 import { AutomationStepData } from './types';
+import LinkSocial from './steps/LinkSocial';
+import CreateTrigger from './steps/CreateTrigger';
 
 export function AutomationModal({
   isOpen,
@@ -35,15 +35,20 @@ export function AutomationModal({
         
         <Tabs value={currentStep} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="agent">Create Agent</TabsTrigger>
+            <TabsTrigger value="agent">
+              <span className="hidden md:inline">Create Agent</span>
+              <span className="md:hidden">Agent</span>
+            </TabsTrigger>
             <TabsTrigger value="social" disabled={!stepData.agent}>
-              Link Social
+              <span className="hidden md:inline">Link Social</span>
+              <span className="md:hidden">Socials</span>
             </TabsTrigger>
             <TabsTrigger 
               value="trigger" 
               disabled={!stepData.agent || stepData.socialConnections.length === 0}
             >
-              Setup Triggers
+              <span className="hidden md:inline">Setup Triggers</span>
+              <span className="md:hidden">Triggers</span>
             </TabsTrigger>
           </TabsList>
 

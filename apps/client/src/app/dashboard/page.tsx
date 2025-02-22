@@ -1,12 +1,30 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Users, Share2, Zap } from "lucide-react";
+import { Activity, Users, Share2, Zap, PlusCircle } from "lucide-react";
+import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { AutomationModal } from "@/components/automation/AutomationModal";
 
 export default function DashboardPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-4">
-      <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Add Automation
+        </Button>
+      </div>
+      <AutomationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

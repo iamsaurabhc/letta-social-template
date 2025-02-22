@@ -1,10 +1,11 @@
 export interface AgentData {
+  id?: string;
   name: string;
   description?: string;
   systemPrompt?: string;
   websiteUrl?: string;
-  industry?: string;
-  targetAudience?: string;
+  industry?: string[];
+  targetAudience?: string[];
   brandPersonality: string[];
   contentPreferences: Record<string, any>;
 }
