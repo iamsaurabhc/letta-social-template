@@ -28,17 +28,17 @@ export class UserAgentService {
 
   async createUserAgent(userId: string, data: CreateUserAgentDto) {
     try {
-      // First create the Letta agent
+      // 1. First create the Letta agent with comprehensive system prompt
       const systemPrompt = this.generateSystemPrompt(data);
       const lettaAgent = await this.lettaAgentService.createAgent({
         name: data.name,
-        description: data.description,
+        description: data.description || `AI agent for ${data.name}`,
         systemPrompt,
-        agentType: AgentType.SOCIAL,
+        agentType: AgentType.MemgptAgent,
         isPublic: false
       });
 
-      // Then create the user agent in Supabase
+      // 2. Create user agent in Supabase with Letta agent ID
       const { data: agent, error } = await this.supabase
         .from('user_agents')
         .insert({
@@ -57,9 +57,14 @@ export class UserAgentService {
 
       if (error) throw error;
 
-      // Queue website scraping if URL is provided
+      // 3. If website URL provided, scrape and update both Supabase and Letta
       if (data.websiteUrl) {
-        await this.websiteScraperService.queueWebsiteScraping(agent.id, data.websiteUrl);
+        // Queue the scraping job which will handle both updates
+        await this.websiteScraperService.queueWebsiteScraping(
+          agent.id, 
+          data.websiteUrl,
+          lettaAgent.id
+        );
       }
 
       return agent;
@@ -69,25 +74,9 @@ export class UserAgentService {
     }
   }
 
-  private generateSystemPrompt(data: CreateUserAgentDto): string {
-    return `You are a social media expert managing content for ${data.name}.
-
-Industry: ${data.industry.join(', ')}
-Target Audience: ${data.targetAudience.join(', ')}
-Brand Personality: ${data.brandPersonality.join(', ')}
-
-Your role is to create engaging social media content that:
-1. Reflects the brand's personality traits
-2. Resonates with the target audience
-3. Provides value within the industry context
-4. Maintains a consistent voice across all platforms
-
-Always ensure content is professional, engaging, and aligned with the brand's values.`;
-  }
-
-  async updateAgentWithScrapedData(agentId: string, scrapedData: any) {
+  async updateAgentWithScrapedData(agentId: string, scrapedData: any, lettaAgentId: string) {
     try {
-      // First fetch the current agent data
+      // Update Supabase agent
       const { data: currentAgent, error: fetchError } = await this.supabase
         .from('user_agents')
         .select('*')
@@ -96,8 +85,7 @@ Always ensure content is professional, engaging, and aligned with the brand's va
 
       if (fetchError) throw fetchError;
 
-      // Then update with new data
-      const { data: updatedAgent, error: updateError } = await this.supabase
+      const { error: updateError } = await this.supabase
         .from('user_agents')
         .update({
           content_preferences: {
@@ -106,15 +94,50 @@ Always ensure content is professional, engaging, and aligned with the brand's va
           },
           updated_at: new Date()
         })
-        .eq('id', agentId)
-        .select()
-        .single();
+        .eq('id', agentId);
 
       if (updateError) throw updateError;
-      return updatedAgent;
+
+      // Format scraped data as text
+      const formattedText = `
+            Website Content:
+            Title: ${scrapedData.title}
+            Description: ${scrapedData.description || 'N/A'}
+            Keywords: ${scrapedData.keywords || 'N/A'}
+            Main Content: ${scrapedData.mainContent}
+      `.trim();
+
+      // Add website content to agent's archival memory
+      await this.lettaAgentService.createAgentArchivalMemory(
+        lettaAgentId,
+        {
+          text: formattedText,
+          collections: ['website_content']
+        }
+      );
+
+      return currentAgent;
     } catch (error) {
       this.logger.error('Error updating agent with scraped data:', error);
       throw error;
     }
+  }
+
+  private generateSystemPrompt(data: CreateUserAgentDto): string {
+    return `You are a social media expert managing content for ${data.name}.
+
+    Industry: ${data.industry.join(', ')}
+    Target Audience: ${data.targetAudience.join(', ')}
+    Brand Personality: ${data.brandPersonality.join(', ')}
+
+    Your role is to create engaging social media content that:
+    1. Reflects the brand's personality traits
+    2. Resonates with the target audience
+    3. Provides value within the industry context
+    4. Maintains a consistent voice across all platforms
+
+    ${data.description ? `Additional Context: ${data.description}` : ''}
+
+    Always ensure content is professional, engaging, and aligned with the brand's values.`;
   }
 } 

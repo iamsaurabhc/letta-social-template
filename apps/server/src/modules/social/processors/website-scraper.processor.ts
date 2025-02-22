@@ -15,13 +15,17 @@ export class WebsiteScraperProcessor {
 
   @Process('scrape-website')
   async handleWebsiteScraping(job: Job) {
-    const { agentId, websiteUrl } = job.data;
+    const { agentId, websiteUrl, lettaAgentId } = job.data;
     
     try {
       const scrapedData = await this.scraperService.scrapeWebsite(websiteUrl);
       
-      // Update the agent with scraped data
-      await this.userAgentService.updateAgentWithScrapedData(agentId, scrapedData);
+      // Update both Supabase and Letta with scraped data
+      await this.userAgentService.updateAgentWithScrapedData(
+        agentId, 
+        scrapedData,
+        lettaAgentId
+      );
       
       return scrapedData;
     } catch (error) {

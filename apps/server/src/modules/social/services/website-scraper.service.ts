@@ -12,10 +12,11 @@ export class WebsiteScraperService {
     @InjectQueue('website-scraping') private scrapingQueue: Queue
   ) {}
 
-  async queueWebsiteScraping(agentId: string, websiteUrl: string) {
+  async queueWebsiteScraping(agentId: string, websiteUrl: string, lettaAgentId: string) {
     await this.scrapingQueue.add('scrape-website', {
       agentId,
-      websiteUrl
+      websiteUrl,
+      lettaAgentId
     });
   }
 
