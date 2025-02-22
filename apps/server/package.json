@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@letta-ai/letta-client": "^0.1.36",
+    "@nestjs/bull": "^11.0.2",
     "@nestjs/common": "^10.3.3",
     "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^10.3.3",
@@ -19,6 +20,9 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.3.3",
     "@supabase/supabase-js": "^2.39.7",
+    "axios": "^1.6.7",
+    "bull": "^4.16.5",
+    "cheerio": "^1.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "common": "*",
