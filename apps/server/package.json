@@ -27,6 +27,7 @@
     "class-validator": "^0.14.1",
     "common": "*",
     "crypto": "^1.0.1",
+    "express": "^4.21.2",
     "oauth-1.0a": "^2.2.6",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

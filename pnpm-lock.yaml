@@ -161,6 +161,9 @@ importers:
       crypto:
         specifier: ^1.0.1
         version: 1.0.1
+      express:
+        specifier: ^4.21.2
+        version: 4.21.2
       oauth-1.0a:
         specifier: ^2.2.6
         version: 2.2.6

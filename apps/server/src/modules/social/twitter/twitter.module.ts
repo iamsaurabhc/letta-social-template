@@ -19,6 +19,6 @@ import { TwitterApiService } from './services/twitter-api.service';
     TwitterProfileService,
     TwitterApiService
   ],
-  exports: [TwitterPostService, TwitterEngagementService, TwitterProfileService]
+  exports: [TwitterPostService, TwitterEngagementService, TwitterProfileService, TwitterApiService]
 })
 export class TwitterModule {} 
