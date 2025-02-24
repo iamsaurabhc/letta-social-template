@@ -25,7 +25,7 @@ CREATE TABLE user_agents (
     letta_agent_id VARCHAR(255) NOT NULL,
     website_url TEXT,
     industry VARCHAR(100),
-    target_audience TEXT,
+    target_audience TEXT[],
     brand_personality TEXT[], -- Array of descriptors
     content_preferences JSONB, -- Flexible storage for preferences
     created_at TIMESTAMPTZ DEFAULT NOW(),

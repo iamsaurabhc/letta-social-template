@@ -3,12 +3,12 @@ export interface AgentData {
     name: string;
     description?: string;
     systemPrompt?: string;
-    websiteUrl?: string;
+    website_url?: string;
     industry?: string[] | string;
-    targetAudience?: string[] | string;
-    brandPersonality: string[] | string;
-    contentPreferences: Record<string, any>;
-    createdAt?: string;
+    target_audience?: string[];
+    brand_personality?: string[];
+    content_preferences?: Record<string, any>;
+    created_at?: string;
     lettaAgentId?: string;
 }
 export interface SocialConnection {

@@ -27,6 +27,7 @@ export class AgentsController {
         target_audience,
         brand_personality,
         content_preferences,
+        created_at,
         social_connections (
           id,
           platform,

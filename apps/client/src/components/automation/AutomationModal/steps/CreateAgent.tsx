@@ -27,6 +27,9 @@ import { TagInput } from "@/components/ui/tag-input";
 import api from '@/utils/api';
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
+import { ChevronRight } from "lucide-react";
+import { useState } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -55,7 +58,38 @@ const parseArrayField = (value: string | string[] | undefined): string[] => {
   return value.split(',').map(item => item.trim());
 };
 
+const parseContentPreferences = (prefs: any) => {
+  const defaultPrefs = {
+    includeNewsUpdates: false,
+    includeIndustryTrends: false,
+    repurposeWebContent: false,
+    engagementMonitoring: false
+  };
+  
+  if (!prefs) return defaultPrefs;
+  
+  return {
+    includeNewsUpdates: prefs.includeNewsUpdates === true,
+    includeIndustryTrends: prefs.includeIndustryTrends === true,
+    repurposeWebContent: prefs.repurposeWebContent === true,
+    engagementMonitoring: prefs.engagementMonitoring === true
+  };
+};
+
+const getPreferenceDescription = (key: string): string => {
+  const descriptions: Record<string, string> = {
+    includeNewsUpdates: "Include relevant industry news before creating new posts",
+    includeIndustryTrends: "Analyze trending topics in your industry for content ideas",
+    repurposeWebContent: "Transform your website content into social media posts",
+    engagementMonitoring: "Track and analyze post performance"
+  };
+  
+  return descriptions[key] || "No description available";
+};
+
 export default function CreateAgent({ onNext, readOnly = false, initialData }: Props) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
@@ -63,14 +97,11 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
       description: initialData.description || "",
       websiteUrl: initialData.websiteUrl || "",
       industry: parseArrayField(initialData.industry),
-      targetAudience: parseArrayField(initialData.targetAudience),
+      targetAudience: Array.isArray(initialData?.targetAudience) 
+        ? initialData.targetAudience 
+        : [],
       brandPersonality: parseArrayField(initialData.brandPersonality),
-      contentPreferences: {
-        includeNewsUpdates: initialData.contentPreferences?.includeNewsUpdates || false,
-        includeIndustryTrends: initialData.contentPreferences?.includeIndustryTrends || false,
-        repurposeWebContent: initialData.contentPreferences?.repurposeWebContent || false,
-        engagementMonitoring: initialData.contentPreferences?.engagementMonitoring || false
-      }
+      contentPreferences: parseContentPreferences(initialData.contentPreferences)
     } : {
       name: "",
       description: "",
@@ -100,25 +131,16 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
         : [];
     console.log('Parsed Industries:', industries);
     
-    // Parse target audience string or array
-    const targetAudiences = Array.isArray(initialData.targetAudience) 
-      ? initialData.targetAudience 
-      : initialData.targetAudience 
-        ? initialData.targetAudience.split(',').map((i: string) => i.trim())
-        : typeof initialData.targetAudience === 'string'
-          ? initialData.targetAudience.split(',').map((i: string) => i.trim())
-          : [];
+    // Parse target audience array
+    const targetAudiences = initialData.target_audience;
     console.log('Parsed Target Audiences:', targetAudiences);
     
     // Parse brand personality string or array
-    const brandPersonalities = Array.isArray(initialData.brandPersonality)
-      ? initialData.brandPersonality
-      : initialData.brandPersonality
-        ? Array.isArray(initialData.brandPersonality)
-          ? initialData.brandPersonality
-          : initialData.brandPersonality.split(',').map((i: string) => i.trim())
-        : [];
+    const brandPersonalities = initialData.brand_personality;
     console.log('Parsed Brand Personalities:', brandPersonalities);
+
+    const preferences = parseContentPreferences(initialData.content_preferences);
+    console.log('Parsed Preferences:', preferences);
 
     return (
       <div className="space-y-6">
@@ -136,9 +158,28 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
             <div>
               <Label>Created</Label>
               <p className="text-sm mt-1">
-                {initialData.createdAt ? new Date(initialData.createdAt).toLocaleString() : 'N/A'}
+                {initialData.created_at 
+                  ? new Date(initialData.created_at).toLocaleString('en-US', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short'
+                    })
+                  : 'N/A'}
               </p>
             </div>
+
+            {initialData.website_url && (
+              <div className="col-span-2">
+                <Label>Website URL</Label>
+                <a 
+                  href={initialData.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm mt-1 text-primary hover:underline block"
+                >
+                  {initialData.website_url}
+                </a>
+              </div>
+            )}
 
             {initialData.description && (
               <div className="col-span-2">
@@ -147,19 +188,7 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
               </div>
             )}
 
-            {initialData.websiteUrl && (
-              <div className="col-span-2">
-                <Label>Website URL</Label>
-                <a 
-                  href={initialData.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm mt-1 text-primary hover:underline block"
-                >
-                  {initialData.websiteUrl}
-                </a>
-              </div>
-            )}
+            
           </div>
         </div>
 
@@ -186,7 +215,7 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
             <div>
               <Label>Target Audience</Label>
               <div className="flex flex-wrap gap-2 mt-2">
-                {targetAudiences.map((audience: string) => (
+                {targetAudiences?.map((audience: string) => (
                   <div 
                     key={audience} 
                     className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium"
@@ -220,45 +249,26 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start space-x-3">
-              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.includeNewsUpdates ? 'bg-primary border-primary' : 'bg-muted'}`} />
-              <div>
-                <Label>Link latest keyword related news</Label>
-                <p className="text-sm text-muted-foreground">
-                  Include relevant industry news before creating new posts
-                </p>
-              </div>
-            </div>
+            {Object.entries(preferences).map(([key, value]) => {
+              const label = {
+                includeNewsUpdates: 'Link latest keyword related news',
+                includeIndustryTrends: 'Monitor industry trends',
+                repurposeWebContent: 'Repurpose website content',
+                engagementMonitoring: 'Monitor engagement patterns'
+              }[key] || key;
 
-            <div className="flex items-start space-x-3">
-              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.includeIndustryTrends ? 'bg-primary border-primary' : 'bg-muted'}`} />
-              <div>
-                <Label>Monitor industry trends</Label>
-                <p className="text-sm text-muted-foreground">
-                  Analyze trending topics in your industry for content ideas
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.repurposeWebContent ? 'bg-primary border-primary' : 'bg-muted'}`} />
-              <div>
-                <Label>Repurpose website content</Label>
-                <p className="text-sm text-muted-foreground">
-                  Transform your website content into social media posts
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.engagementMonitoring ? 'bg-primary border-primary' : 'bg-muted'}`} />
-              <div>
-                <Label>Monitor engagement</Label>
-                <p className="text-sm text-muted-foreground">
-                  Track and analyze post performance
-                </p>
-              </div>
-            </div>
+              return (
+                <div key={key} className="flex items-start space-x-3">
+                  <div className={`h-4 w-4 mt-1 rounded border ${value ? 'bg-primary border-primary' : 'bg-muted'}`} />
+                  <div>
+                    <Label>{label}</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {getPreferenceDescription(key)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -283,15 +293,18 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      console.log('Form Values being submitted:', values);
+      setIsSubmitting(true);
       
       const response = await api.post('/social/agents', {
         ...values,
         contentPreferences: values.contentPreferences
       });
       
-      console.log('API Response:', response.data);
-      
+      toast({
+        title: "Agent Created Successfully",
+        description: "Redirecting to social connections setup...",
+      });
+
       onNext({
         id: response.data.id,
         name: values.name,
@@ -304,7 +317,13 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
       });
     } catch (error) {
       console.error('Error creating agent:', error);
-      // Add error handling here - you might want to show a toast notification
+      toast({
+        variant: "destructive",
+        title: "Failed to Create Agent",
+        description: "Please try again. If the problem persists, contact support.",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -526,7 +545,23 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit">Save & Continue</Button>
+          <Button 
+            type="submit"
+            disabled={isSubmitting}
+            className="flex items-center gap-2"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <span>Save & Continue</span>
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
         </div>
       </form>
     </Form>

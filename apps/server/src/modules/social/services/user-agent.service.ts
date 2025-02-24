@@ -129,7 +129,7 @@ export class UserAgentService {
           description: data.description,
           website_url: data.websiteUrl,
           industry: data.industry.join(', '),
-          target_audience: data.targetAudience.join(', '),
+          target_audience: data.targetAudience,
           brand_personality: data.brandPersonality,
           content_preferences: {
             ...data.contentPreferences,
