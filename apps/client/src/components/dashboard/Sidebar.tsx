@@ -16,7 +16,7 @@ const sidebarItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -44,7 +44,10 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-6 border-t">
+      <div className="p-6 border-t space-y-2">
+        <p className="text-sm text-muted-foreground px-3 pb-4">
+          Logged in as {user?.email}
+        </p>
         <Button
           onClick={handleSignOut}
           variant="destructive"

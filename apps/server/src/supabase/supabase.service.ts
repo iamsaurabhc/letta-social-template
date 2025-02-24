@@ -48,9 +48,12 @@ export class SupabaseService {
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        this.logger.error('Database error:', error);
+        throw error;
+      }
 
       if (!agent) {
         return { incompleteAgent: null };
@@ -66,7 +69,59 @@ export class SupabaseService {
       };
     } catch (error) {
       this.logger.error('Failed to get agent status:', error);
+      return { incompleteAgent: null };
+    }
+  }
+
+  async getAgentStats(userId: string) {
+    try {
+      const { data: agents, error } = await this.supabaseClient
+        .from('user_agents')
+        .select('id, created_at')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const now = new Date();
+      const lastMonth = new Date(now.setMonth(now.getMonth() - 1));
+
+      const totalAgents = agents.length;
+      const lastMonthAgents = agents.filter(agent => 
+        new Date(agent.created_at) > lastMonth
+      ).length;
+
+      return {
+        total: totalAgents,
+        newThisMonth: lastMonthAgents
+      };
+    } catch (error) {
+      this.logger.error('Failed to get agent stats:', error);
       throw error;
+    }
+  }
+
+  async getConnectionStats(userId: string) {
+    try {
+      const { data: connections, error } = await this.supabaseClient
+        .from('social_connections')
+        .select('platform')
+        .eq('user_id', userId);
+
+      if (error) {
+        this.logger.error('Database error:', error);
+        throw error;
+      }
+
+      const totalConnections = connections.length;
+      const uniquePlatforms = new Set(connections.map(conn => conn.platform)).size;
+
+      return {
+        total: totalConnections,
+        platformCount: uniquePlatforms
+      };
+    } catch (error) {
+      this.logger.error('Failed to get connection stats:', error);
+      return { total: 0, platformCount: 0 };
     }
   }
 } 

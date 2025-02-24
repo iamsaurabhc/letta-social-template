@@ -15,26 +15,54 @@ export default function DashboardPage() {
     hasTriggers: boolean;
   } | null>(null);
 
+  const [agentStats, setAgentStats] = useState<{
+    total: number;
+    newThisMonth: number;
+  }>({
+    total: 0,
+    newThisMonth: 0
+  });
+
+  const [connectionStats, setConnectionStats] = useState<{
+    total: number;
+    platformCount: number;
+  }>({
+    total: 0,
+    platformCount: 0
+  });
+
   useEffect(() => {
-    const fetchAutomationStatus = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/social/agents/status');
-        const { data } = response;
+        const [automationResponse, statsResponse, connectionsResponse] = await Promise.all([
+          api.get('/social/agents/status'),
+          api.get('/social/agents/stats'),
+          api.get('/social/agents/connections/stats')
+        ]);
         
-        if (data.incompleteAgent) {
+        if (automationResponse.data?.incompleteAgent) {
           setIncompleteAutomations({
-            id: data.incompleteAgent.id,
-            agentName: data.incompleteAgent.name,
-            hasSocialConnections: data.incompleteAgent.hasSocialConnections,
-            hasTriggers: data.incompleteAgent.hasTriggers
+            id: automationResponse.data.incompleteAgent.id,
+            agentName: automationResponse.data.incompleteAgent.name,
+            hasSocialConnections: automationResponse.data.incompleteAgent.hasSocialConnections,
+            hasTriggers: automationResponse.data.incompleteAgent.hasTriggers
           });
+        } else {
+          setIncompleteAutomations(null);
         }
+
+        setAgentStats(statsResponse.data || { total: 0, newThisMonth: 0 });
+        setConnectionStats(connectionsResponse.data || { total: 0, platformCount: 0 });
       } catch (error) {
-        console.error('Failed to fetch automation status:', error);
+        console.error('Failed to fetch dashboard data:', error);
+        // Set default values on error
+        setIncompleteAutomations(null);
+        setAgentStats({ total: 0, newThisMonth: 0 });
+        setConnectionStats({ total: 0, platformCount: 0 });
       }
     };
 
-    fetchAutomationStatus();
+    fetchData();
   }, []);
 
   return (
@@ -59,9 +87,9 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{agentStats.total}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from last month
+              +{agentStats.newThisMonth} from last month
             </p>
           </CardContent>
         </Card>
@@ -72,9 +100,9 @@ export default function DashboardPage() {
             <Share2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{connectionStats.total}</div>
             <p className="text-xs text-muted-foreground">
-              Across 4 platforms
+              Across {connectionStats.platformCount} platform{connectionStats.platformCount !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
