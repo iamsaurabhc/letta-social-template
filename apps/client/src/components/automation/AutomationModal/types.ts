@@ -4,9 +4,9 @@ export interface AgentData {
     description?: string;
     systemPrompt?: string;
     websiteUrl?: string;
-    industry?: string[];
-    targetAudience?: string[];
-    brandPersonality: string[];
+    industry?: string[] | string;
+    targetAudience?: string[] | string;
+    brandPersonality: string[] | string;
     contentPreferences: Record<string, any>;
     createdAt?: string;
     lettaAgentId?: string;

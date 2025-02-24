@@ -49,10 +49,29 @@ interface Props {
   initialData?: AgentData;
 }
 
+const parseArrayField = (value: string | string[] | undefined): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return value.split(',').map(item => item.trim());
+};
+
 export default function CreateAgent({ onNext, readOnly = false, initialData }: Props) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      name: initialData.name,
+      description: initialData.description || "",
+      websiteUrl: initialData.websiteUrl || "",
+      industry: parseArrayField(initialData.industry),
+      targetAudience: parseArrayField(initialData.targetAudience),
+      brandPersonality: parseArrayField(initialData.brandPersonality),
+      contentPreferences: {
+        includeNewsUpdates: initialData.contentPreferences?.includeNewsUpdates || false,
+        includeIndustryTrends: initialData.contentPreferences?.includeIndustryTrends || false,
+        repurposeWebContent: initialData.contentPreferences?.repurposeWebContent || false,
+        engagementMonitoring: initialData.contentPreferences?.engagementMonitoring || false
+      }
+    } : {
       name: "",
       description: "",
       websiteUrl: "",
@@ -65,7 +84,7 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
         repurposeWebContent: false,
         engagementMonitoring: false
       }
-    },
+    }
   });
 
   const router = useRouter();
@@ -84,8 +103,8 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
     // Parse target audience string or array
     const targetAudiences = Array.isArray(initialData.targetAudience) 
       ? initialData.targetAudience 
-      : initialData.target_audience 
-        ? initialData.target_audience.split(',').map((i: string) => i.trim())
+      : initialData.targetAudience 
+        ? initialData.targetAudience.split(',').map((i: string) => i.trim())
         : typeof initialData.targetAudience === 'string'
           ? initialData.targetAudience.split(',').map((i: string) => i.trim())
           : [];
@@ -94,10 +113,10 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
     // Parse brand personality string or array
     const brandPersonalities = Array.isArray(initialData.brandPersonality)
       ? initialData.brandPersonality
-      : initialData.brand_personality
-        ? Array.isArray(initialData.brand_personality)
-          ? initialData.brand_personality
-          : initialData.brand_personality.split(',').map((i: string) => i.trim())
+      : initialData.brandPersonality
+        ? Array.isArray(initialData.brandPersonality)
+          ? initialData.brandPersonality
+          : initialData.brandPersonality.split(',').map((i: string) => i.trim())
         : [];
     console.log('Parsed Brand Personalities:', brandPersonalities);
 
