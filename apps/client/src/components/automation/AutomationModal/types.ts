@@ -1,15 +1,16 @@
 export interface AgentData {
-  id?: string;
-  name: string;
-  description?: string;
-  systemPrompt?: string;
-  websiteUrl?: string;
-  industry?: string[];
-  targetAudience?: string[];
-  brandPersonality: string[];
-  contentPreferences: Record<string, any>;
+    id?: string;
+    name: string;
+    description?: string;
+    systemPrompt?: string;
+    websiteUrl?: string;
+    industry?: string[];
+    targetAudience?: string[];
+    brandPersonality: string[];
+    contentPreferences: Record<string, any>;
+    createdAt?: string;
+    lettaAgentId?: string;
 }
-
 export interface SocialConnection {
   platform: 'twitter' | 'linkedin' | 'instagram' | 'facebook' | 'threads' | 'youtube' | 'gbp';
   username?: string;

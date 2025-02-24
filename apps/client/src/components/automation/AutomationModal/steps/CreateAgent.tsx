@@ -26,6 +26,7 @@ import { AgentData } from '../types';
 import { TagInput } from "@/components/ui/tag-input";
 import api from '@/utils/api';
 import { Checkbox } from "@/components/ui/checkbox";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -44,26 +45,203 @@ const formSchema = z.object({
 
 interface Props {
   onNext: (data: AgentData) => void;
+  readOnly?: boolean;
+  initialData?: AgentData;
 }
 
-export default function CreateAgent({ onNext }: Props) {
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            name: "",
-            description: "",
-            websiteUrl: "",
-            industry: [],
-            targetAudience: [],
-            brandPersonality: [],
-            contentPreferences: {
-            includeNewsUpdates: false,
-            includeIndustryTrends: false,
-            repurposeWebContent: false,
-            engagementMonitoring: false
-            }
+export default function CreateAgent({ onNext, readOnly = false, initialData }: Props) {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: initialData || {
+      name: "",
+      description: "",
+      websiteUrl: "",
+      industry: [],
+      targetAudience: [],
+      brandPersonality: [],
+      contentPreferences: {
+        includeNewsUpdates: false,
+        includeIndustryTrends: false,
+        repurposeWebContent: false,
+        engagementMonitoring: false
+      }
     },
-    });
+  });
+
+  const router = useRouter();
+
+  if (readOnly && initialData) {
+    // Convert string or comma-separated string to array
+    const parseArrayField = (field: string[] | string | undefined): string[] => {
+      if (!field) return [];
+      if (Array.isArray(field)) return field;
+      if (typeof field === 'string') return field.split(',').map(item => item.trim());
+      return [];
+    };
+
+    const industries = parseArrayField(initialData.industry);
+    const targetAudiences = parseArrayField(initialData.targetAudience);
+    const brandPersonalities = parseArrayField(initialData.brandPersonality);
+
+    return (
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="border-b pb-2">
+            <h3 className="font-medium">Basic Information</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Agent Name</Label>
+              <p className="text-sm mt-1">{initialData.name}</p>
+            </div>
+            
+            <div>
+              <Label>Created</Label>
+              <p className="text-sm mt-1">
+                {initialData.createdAt ? new Date(initialData.createdAt).toLocaleString() : 'N/A'}
+              </p>
+            </div>
+
+            {initialData.description && (
+              <div className="col-span-2">
+                <Label>Description</Label>
+                <p className="text-sm mt-1">{initialData.description}</p>
+              </div>
+            )}
+
+            {initialData.websiteUrl && (
+              <div className="col-span-2">
+                <Label>Website URL</Label>
+                <a 
+                  href={initialData.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm mt-1 text-primary hover:underline block"
+                >
+                  {initialData.websiteUrl}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="border-b pb-2">
+            <h3 className="font-medium">Agent Preferences</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <Label>Industry</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {industries.map((tag: string) => (
+                  <div key={tag} className="bg-muted px-2 py-1 rounded-md text-sm">
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label>Target Audience</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {targetAudiences.length > 0 ? (
+                  targetAudiences.map((tag: string) => (
+                    <div key={tag} className="bg-muted px-2 py-1 rounded-md text-sm">
+                      {tag}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No target audience specified</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label>Brand Personality</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {brandPersonalities.length > 0 ? (
+                  brandPersonalities.map((tag: string) => (
+                    <div key={tag} className="bg-muted px-2 py-1 rounded-md text-sm">
+                      {tag}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No brand personality traits specified</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Strategy Section */}
+        <div className="space-y-4">
+          <div className="border-b pb-2">
+            <h3 className="font-medium">Content Strategy</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-start space-x-3">
+              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.includeNewsUpdates ? 'bg-primary border-primary' : 'bg-muted'}`} />
+              <div>
+                <Label>Link latest keyword related news</Label>
+                <p className="text-sm text-muted-foreground">
+                  Include relevant industry news before creating new posts
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.includeIndustryTrends ? 'bg-primary border-primary' : 'bg-muted'}`} />
+              <div>
+                <Label>Monitor industry trends</Label>
+                <p className="text-sm text-muted-foreground">
+                  Analyze trending topics in your industry for content ideas
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.repurposeWebContent ? 'bg-primary border-primary' : 'bg-muted'}`} />
+              <div>
+                <Label>Repurpose website content</Label>
+                <p className="text-sm text-muted-foreground">
+                  Transform your website content into social media posts
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className={`h-4 w-4 mt-1 rounded border ${initialData.contentPreferences?.engagementMonitoring ? 'bg-primary border-primary' : 'bg-muted'}`} />
+              <div>
+                <Label>Monitor engagement</Label>
+                <p className="text-sm text-muted-foreground">
+                  Track and analyze post performance
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between">
+          <Button 
+            variant="outline"
+            onClick={() => router.push('/dashboard')}
+          >
+            Back to Dashboard
+          </Button>
+          <Button 
+            onClick={() => {
+              router.push(`/dashboard/automation?step=social&agentId=${initialData.id}`);
+            }}
+          >
+            Continue Setup
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {

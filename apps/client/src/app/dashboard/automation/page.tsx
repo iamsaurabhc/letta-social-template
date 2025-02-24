@@ -87,10 +87,7 @@ export default function AutomationPage() {
                 <h1 className="text-2xl font-bold">Continue Automation Setup</h1>
                 <div className="flex flex-col gap-1">
                   <p className="text-muted-foreground">
-                    Continue setting up automated posting for {stepData.agent.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {stepData.agent.description}
+                    Set up automated posting for agent <span className="font-bold">{stepData.agent.name}</span>
                   </p>
                 </div>
               </>
@@ -143,6 +140,8 @@ export default function AutomationPage() {
               setCurrentStep('social');
               router.push(`/dashboard/automation?step=social&agentId=${agentData.id}`);
             }}
+            readOnly={!!stepData.agent}
+            initialData={stepData.agent || undefined}
           />
         </TabsContent>
 

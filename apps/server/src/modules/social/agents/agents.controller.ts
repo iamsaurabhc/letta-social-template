@@ -21,6 +21,12 @@ export class AgentsController {
       .select(`
         id,
         name,
+        description,
+        website_url,
+        industry,
+        target_audience,
+        brand_personality,
+        content_preferences,
         social_connections (
           id,
           platform,
