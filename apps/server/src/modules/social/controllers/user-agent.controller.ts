@@ -51,4 +51,34 @@ export class UserAgentController {
     }
     return this.supabaseService.getConnectionStats(userId);
   }
+
+  @Get()
+  async getAllAgents(@User('sub') userId: string) {
+    if (!userId) {
+      throw new UnauthorizedException('User ID not found');
+    }
+    try {
+      const { data, error } = await this.supabaseService.client
+        .from('user_agents')
+        .select(`
+          id,
+          name,
+          description,
+          website_url,
+          industry,
+          target_audience,
+          brand_personality,
+          content_preferences,
+          created_at
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.logger.error('Error fetching agents:', error);
+      throw error;
+    }
+  }
 } 
