@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
+import { ChevronRight } from "lucide-react";
 
 interface Props {
   onNext: (data: { connections: SocialConnection[], inspirationUrls: string[] }) => void;
@@ -35,11 +36,15 @@ export default function LinkSocial({ onNext }: Props) {
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    // Check for auth callback status and twitterData
+    fetchConnections();
+  }, []);
+
+  useEffect(() => {
     const status = searchParams.get('status');
     const step = searchParams.get('step');
     const twitterData = searchParams.get('twitterData');
     const errorMessage = searchParams.get('message');
+    const agentId = searchParams.get('agentId');
 
     if (errorMessage) {
       toast({
@@ -48,14 +53,14 @@ export default function LinkSocial({ onNext }: Props) {
         description: decodeURIComponent(errorMessage)
       });
       
-      // Clean up URL params
+      // Clean up URL params while preserving agentId
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.delete('status');
       newUrl.searchParams.delete('message');
       router.replace(newUrl.toString());
     } else if (twitterData) {
       try {
-        const parsedData = JSON.parse(twitterData);
+        const parsedData = JSON.parse(decodeURIComponent(twitterData));
         // Update connections with username
         setConnections(prev => [...prev, {
           platform: 'twitter',
@@ -63,15 +68,21 @@ export default function LinkSocial({ onNext }: Props) {
           settings: {}
         }]);
         
-        // Remove the twitterData from the URL
+        // Remove the twitterData from the URL while preserving agentId
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete('twitterData');
+        newUrl.searchParams.delete('status');
+        if (agentId) {
+          newUrl.searchParams.set('agentId', agentId);
+        }
         router.replace(newUrl.toString());
-        
-        // Fetch updated connections after successful auth
-        fetchConnections();
       } catch (error) {
         console.error('Failed to parse Twitter data:', error);
+        toast({
+          variant: "destructive",
+          title: "Connection Failed",
+          description: "Failed to process Twitter connection data"
+        });
       }
     } else if (step === 'social' && status === 'success') {
       fetchConnections();
@@ -99,7 +110,7 @@ export default function LinkSocial({ onNext }: Props) {
         });
         return;
       }
-
+  
       const response = await api.get(`/social/twitter/auth/url?agentId=${agentId}`);
       
       if (response.data?.url) {
@@ -127,6 +138,18 @@ export default function LinkSocial({ onNext }: Props) {
 
   const isConnected = (platform: string) => {
     return connections.some(conn => conn.platform === platform);
+  };
+
+  const handleComplete = () => {
+    onNext({
+      connections: connections,
+      inspirationUrls: inspirationUrls
+    });
+    
+    const agentId = searchParams.get('agentId');
+    if (agentId) {
+      router.push(`/dashboard/automation?step=trigger&agentId=${agentId}`);
+    }
   };
 
   return (
@@ -167,12 +190,22 @@ export default function LinkSocial({ onNext }: Props) {
         ))}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between">
         <Button 
-          onClick={() => onNext({ connections, inspirationUrls })}
+          variant="outline"
+          onClick={() => {
+            const agentId = searchParams.get('agentId');
+            router.push(`/dashboard/automation?step=agent&agentId=${agentId}`);
+          }}
+        >
+          Back
+        </Button>
+        <Button 
+          onClick={handleComplete}
           disabled={connections.length === 0}
         >
           Save & Continue
+          <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>

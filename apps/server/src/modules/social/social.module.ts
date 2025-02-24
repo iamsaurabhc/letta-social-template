@@ -12,6 +12,9 @@ import { TwitterAuthController } from './twitter/controllers/auth.controller';
 import { TwitterAuthService } from './twitter/services/auth.service';
 import { TwitterApiService } from './twitter/services/twitter-api.service';
 import { AuthModule } from '../../auth/auth.module';
+import { ConnectionsController } from './connections/connections.controller';
+import { SupabaseService } from '../../supabase/supabase.service';
+import { AgentsController } from './agents/agents.controller';
 
 @Module({
   imports: [
@@ -26,14 +29,17 @@ import { AuthModule } from '../../auth/auth.module';
   ],
   controllers: [
     UserAgentController,
-    TwitterAuthController
+    TwitterAuthController,
+    ConnectionsController,
+    AgentsController
   ],
   providers: [
     UserAgentService,
     WebsiteScraperService,
     WebsiteScraperProcessor,
     TwitterAuthService,
-    TwitterApiService
+    TwitterApiService,
+    SupabaseService
   ],
   exports: [
     TwitterModule,

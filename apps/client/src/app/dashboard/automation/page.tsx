@@ -8,6 +8,8 @@ import LinkSocial from '@/components/automation/AutomationModal/steps/LinkSocial
 import CreateTrigger from '@/components/automation/AutomationModal/steps/CreateTrigger';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/utils/api';
+import { Button } from '@/components/ui/button';
+import { ChevronRight } from 'lucide-react';
 
 export default function AutomationPage() {
   const [currentStep, setCurrentStep] = useState<'agent' | 'social' | 'trigger'>('agent');
@@ -78,8 +80,41 @@ export default function AutomationPage() {
   return (
     <div className="container max-w-[800px] py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Add Automation</h1>
-        <p className="text-muted-foreground">Set up automated posting for your agent</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            {stepData.agent ? (
+              <>
+                <h1 className="text-2xl font-bold">Continue Automation Setup</h1>
+                <div className="flex flex-col gap-1">
+                  <p className="text-muted-foreground">
+                    Continue setting up automated posting for {stepData.agent.name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {stepData.agent.description}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold">Add Automation</h1>
+                <p className="text-muted-foreground">Set up automated posting for your agent</p>
+              </>
+            )}
+          </div>
+          
+          {stepData.agent && (
+            <Button 
+              onClick={() => {
+                const nextStep = !stepData.socialConnections.length ? 'social' : 'trigger';
+                router.push(`/dashboard/automation?step=${nextStep}&agentId=${stepData.agent?.id}`);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Save & Continue
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs value={currentStep} className="w-full">
@@ -114,13 +149,13 @@ export default function AutomationPage() {
         <TabsContent value="social">
           <LinkSocial 
             onNext={(socialData) => {
-              setStepData(prev => ({ 
-                ...prev, 
+              setStepData(prev => ({
+                ...prev,
                 socialConnections: socialData.connections,
-                inspirationUrls: socialData.inspirationUrls 
+                inspirationUrls: socialData.inspirationUrls
               }));
               setCurrentStep('trigger');
-              navigateToStep('trigger');
+              router.push(`/dashboard/automation?step=trigger&agentId=${stepData.agent?.id}`);
             }}
           />
         </TabsContent>

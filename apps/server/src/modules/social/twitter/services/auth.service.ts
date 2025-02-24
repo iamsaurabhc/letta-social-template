@@ -4,11 +4,12 @@ import { TwitterApiService } from './twitter-api.service';
 import * as OAuth from 'oauth-1.0a';
 import { createHmac } from 'crypto';
 import { SupabaseService } from '@/supabase/supabase.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class TwitterAuthService {
-  private readonly logger = new Logger(TwitterAuthService.name);
   private readonly oauth: OAuth;
+  private readonly logger = new Logger(TwitterAuthService.name);
 
   constructor(
     private readonly configService: ConfigService,
@@ -19,7 +20,8 @@ export class TwitterAuthService {
     const consumerSecret = this.configService.get('TWITTER_CONSUMER_SECRET');
 
     if (!consumerKey || !consumerSecret) {
-      throw new Error('Twitter configuration is missing');
+      this.logger.error('Twitter API credentials are not configured');
+      throw new Error('Twitter API credentials are not configured');
     }
 
     this.logger.debug(`Initializing Twitter OAuth with consumer key: ${consumerKey.substring(0, 5)}...`);
@@ -31,52 +33,34 @@ export class TwitterAuthService {
       },
       signature_method: 'HMAC-SHA1',
       hash_function: (baseString: string, key: string) => {
-        return createHmac('sha1', key).update(baseString).digest('base64');
-      }
+        return crypto
+          .createHmac('sha1', key)
+          .update(baseString)
+          .digest('base64');
+      },
     });
   }
 
   async getAuthorizationUrl(userId: string, agentId: string): Promise<string> {
-    if (!userId || !agentId) {
-      this.logger.error('Missing required parameters');
-      throw new Error('User ID and Agent ID are required');
-    }
-
     try {
       const serverUrl = this.configService.get('SERVER_URL');
-      if (!serverUrl) {
-        throw new Error('SERVER_URL is not configured');
-      }
-
       const callbackUrl = `${serverUrl}/api/social/twitter/auth/callback`;
-      this.logger.debug(`Callback URL: ${callbackUrl}`);
-
-      const requestTokenUrl = 'https://api.twitter.com/oauth/request_token';
       
-      const state = JSON.stringify({ userId, agentId });
+      // Create state parameter with both user and agent IDs
+      const state = encodeURIComponent(JSON.stringify({ userId, agentId }));
       
       const requestData = {
-        url: requestTokenUrl,
+        url: 'https://api.twitter.com/oauth/request_token',
         method: 'POST',
         data: { 
-          oauth_callback: callbackUrl,
-          state: encodeURIComponent(state)
+          oauth_callback: `${callbackUrl}?state=${state}`
         }
       };
 
-      const authHeaders = this.oauth.toHeader(
-        this.oauth.authorize(requestData)
-      );
-
-      this.logger.debug(`Request headers: ${JSON.stringify(authHeaders)}`);
-      this.logger.debug(`Making request to: ${requestTokenUrl}`);
-
-      const response = await fetch(requestTokenUrl, {
+      const headers = this.oauth.toHeader(this.oauth.authorize(requestData));
+      const response = await fetch('https://api.twitter.com/oauth/request_token', {
         method: 'POST',
-        headers: {
-          ...authHeaders,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        }
+        headers: headers as unknown as HeadersInit
       });
 
       if (!response.ok) {
@@ -86,14 +70,9 @@ export class TwitterAuthService {
       }
 
       const data = await response.text();
-      const params = new URLSearchParams(data);
-      const oauth_token = params.get('oauth_token');
-
-      if (!oauth_token) {
-        throw new Error('Failed to get OAuth token');
-      }
-
-      return `https://api.twitter.com/oauth/authorize?oauth_token=${oauth_token}&state=${encodeURIComponent(state)}`;
+      const { oauth_token } = Object.fromEntries(new URLSearchParams(data));
+      
+      return `https://api.twitter.com/oauth/authorize?oauth_token=${oauth_token}`;
     } catch (error) {
       this.logger.error('Failed to get authorization URL:', error);
       throw error;
@@ -106,8 +85,13 @@ export class TwitterAuthService {
     oauthVerifier: string
   ): Promise<{ redirectUrl: string }> {
     try {
-      const { userId, agentId } = JSON.parse(state);
-      
+      const stateData = JSON.parse(decodeURIComponent(state));
+      const { userId, agentId } = stateData;
+
+      if (!userId || !agentId) {
+        throw new Error('Invalid state parameter');
+      }
+
       const accessTokenURL = 'https://api.twitter.com/oauth/access_token';
       const requestData = {
         url: accessTokenURL,
@@ -121,7 +105,10 @@ export class TwitterAuthService {
       const headers = this.oauth.toHeader(this.oauth.authorize(requestData));
       const response = await fetch(accessTokenURL, {
         method: 'POST',
-        headers: headers as unknown as HeadersInit
+        headers: {
+          ...headers as unknown as HeadersInit,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       });
 
       if (!response.ok) {
@@ -132,12 +119,13 @@ export class TwitterAuthService {
       const params = new URLSearchParams(data);
       const accessToken = params.get('oauth_token');
       const refreshToken = params.get('oauth_token_secret');
+      const username = params.get('screen_name');
 
-      if (!accessToken || !refreshToken) {
-        throw new Error('Failed to get access token');
+      if (!accessToken || !refreshToken || !username) {
+        throw new Error('Failed to get required tokens from Twitter');
       }
 
-      const { error } = await this.supabaseService.client
+      await this.supabaseService.client
         .from('social_connections')
         .insert({
           user_id: userId,
@@ -145,30 +133,20 @@ export class TwitterAuthService {
           platform: 'twitter',
           access_token: accessToken,
           refresh_token: refreshToken,
-          username: params.get('screen_name'),
+          username: username,
           token_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           platform_settings: {}
         });
 
-      if (error) {
-        this.logger.error('Failed to store Twitter credentials:', error);
-        throw new Error('Failed to store Twitter credentials');
-      }
-
-      // Return the Twitter data along with saving to DB
+      const clientUrl = this.configService.get('CLIENT_URL');
       const twitterData = {
+        username: username,
         token: accessToken,
-        tokenSecret: refreshToken,
-        id: userId,
-        username: params.get('screen_name')
+        tokenSecret: refreshToken
       };
 
-      const clientUrl = this.configService.get('CLIENT_URL');
-      const encodedData = encodeURIComponent(JSON.stringify(twitterData));
-      
-      // Return the URL instead of redirecting
       return {
-        redirectUrl: `${clientUrl}/dashboard/automation?step=social&status=success&twitterData=${encodedData}&agentId=${agentId}`
+        redirectUrl: `${clientUrl}/dashboard/automation?step=social&status=success&twitterData=${encodeURIComponent(JSON.stringify(twitterData))}&agentId=${agentId}`
       };
     } catch (error) {
       this.logger.error('Twitter callback error:', error);

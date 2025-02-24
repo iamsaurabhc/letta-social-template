@@ -65,9 +65,16 @@ export class TwitterAuthController {
     const { oauth_token, oauth_verifier, state } = request.query;
     
     try {
-      const userId = state;
+      if (!oauth_token || !oauth_verifier) {
+        throw new Error('Missing OAuth token or verifier');
+      }
+
+      if (!state) {
+        throw new Error('Missing state parameter');
+      }
+
       const { redirectUrl } = await this.twitterAuthService.handleCallback(
-        userId,
+        state as string,
         oauth_token as string,
         oauth_verifier as string
       );
@@ -76,7 +83,8 @@ export class TwitterAuthController {
     } catch (error) {
       this.logger.error('Twitter auth error:', error);
       const clientUrl = this.configService.get('CLIENT_URL');
-      return response.redirect(`${clientUrl}/dashboard/automation?step=social&status=error&message=${encodeURIComponent(error.message)}`);
+      const errorMessage = encodeURIComponent(error.message || 'Failed to authenticate with Twitter');
+      return response.redirect(`${clientUrl}/dashboard/automation?step=social&status=error&message=${errorMessage}`);
     }
   }
 } 
