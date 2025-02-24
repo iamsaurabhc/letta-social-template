@@ -131,7 +131,10 @@ export class UserAgentService {
           industry: data.industry.join(', '),
           target_audience: data.targetAudience.join(', '),
           brand_personality: data.brandPersonality,
-          content_preferences: data.contentPreferences,
+          content_preferences: {
+            ...data.contentPreferences,
+            updatedAt: new Date().toISOString()
+          },
           letta_agent_id: lettaAgent.id
         })
         .select()

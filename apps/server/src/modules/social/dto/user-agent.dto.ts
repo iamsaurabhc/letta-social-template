@@ -1,4 +1,12 @@
-import { IsString, IsArray, IsObject, IsOptional, IsUrl } from 'class-validator';
+import { IsString, IsArray, IsObject, IsOptional, IsUrl, IsBoolean } from 'class-validator';
+
+export interface ContentPreferences {
+  includeNewsUpdates: boolean;
+  includeIndustryTrends: boolean;
+  repurposeWebContent: boolean;
+  engagementMonitoring: boolean;
+  websiteData?: any;
+}
 
 export class CreateUserAgentDto {
   @IsString()
@@ -22,5 +30,5 @@ export class CreateUserAgentDto {
   brandPersonality: string[];
 
   @IsObject()
-  contentPreferences: Record<string, any>;
+  contentPreferences: ContentPreferences;
 } 
