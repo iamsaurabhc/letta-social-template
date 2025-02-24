@@ -71,22 +71,40 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
   const router = useRouter();
 
   if (readOnly && initialData) {
-    // Convert string or comma-separated string to array
-    const parseArrayField = (field: string[] | string | undefined): string[] => {
-      if (!field) return [];
-      if (Array.isArray(field)) return field;
-      if (typeof field === 'string') return field.split(',').map(item => item.trim());
-      return [];
-    };
-
-    const industries = parseArrayField(initialData.industry);
-    const targetAudiences = parseArrayField(initialData.targetAudience);
-    const brandPersonalities = parseArrayField(initialData.brandPersonality);
+    console.log('Initial Data from API:', initialData);
+    
+    // Parse industry string or array
+    const industries = Array.isArray(initialData.industry) 
+      ? initialData.industry 
+      : typeof initialData.industry === 'string'
+        ? initialData.industry.split(',').map((i: string) => i.trim())
+        : [];
+    console.log('Parsed Industries:', industries);
+    
+    // Parse target audience string or array
+    const targetAudiences = Array.isArray(initialData.targetAudience) 
+      ? initialData.targetAudience 
+      : initialData.target_audience 
+        ? initialData.target_audience.split(',').map((i: string) => i.trim())
+        : typeof initialData.targetAudience === 'string'
+          ? initialData.targetAudience.split(',').map((i: string) => i.trim())
+          : [];
+    console.log('Parsed Target Audiences:', targetAudiences);
+    
+    // Parse brand personality string or array
+    const brandPersonalities = Array.isArray(initialData.brandPersonality)
+      ? initialData.brandPersonality
+      : initialData.brand_personality
+        ? Array.isArray(initialData.brand_personality)
+          ? initialData.brand_personality
+          : initialData.brand_personality.split(',').map((i: string) => i.trim())
+        : [];
+    console.log('Parsed Brand Personalities:', brandPersonalities);
 
     return (
       <div className="space-y-6">
         <div className="space-y-4">
-          <div className="border-b pb-2">
+          <div className="border-b pb-2 pt-2">
             <h3 className="font-medium">Basic Information</h3>
           </div>
           
@@ -131,12 +149,15 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
             <h3 className="font-medium">Agent Preferences</h3>
           </div>
           
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <Label>Industry</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {industries.map((tag: string) => (
-                  <div key={tag} className="bg-muted px-2 py-1 rounded-md text-sm">
+                  <div 
+                    key={tag} 
+                    className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium"
+                  >
                     {tag}
                   </div>
                 ))}
@@ -145,31 +166,29 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
 
             <div>
               <Label>Target Audience</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {targetAudiences.length > 0 ? (
-                  targetAudiences.map((tag: string) => (
-                    <div key={tag} className="bg-muted px-2 py-1 rounded-md text-sm">
-                      {tag}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No target audience specified</p>
-                )}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {targetAudiences.map((audience: string) => (
+                  <div 
+                    key={audience} 
+                    className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium"
+                  >
+                    {audience}
+                  </div>
+                ))}
               </div>
             </div>
 
             <div>
               <Label>Brand Personality</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {brandPersonalities.length > 0 ? (
-                  brandPersonalities.map((tag: string) => (
-                    <div key={tag} className="bg-muted px-2 py-1 rounded-md text-sm">
-                      {tag}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No brand personality traits specified</p>
-                )}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {brandPersonalities.map((trait: string) => (
+                  <div 
+                    key={trait} 
+                    className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium"
+                  >
+                    {trait}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -245,10 +264,14 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      console.log('Form Values being submitted:', values);
+      
       const response = await api.post('/social/agents', {
         ...values,
-        contentPreferences: {}
+        contentPreferences: values.contentPreferences
       });
+      
+      console.log('API Response:', response.data);
       
       onNext({
         id: response.data.id,
@@ -258,7 +281,7 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
         industry: values.industry,
         targetAudience: values.targetAudience,
         brandPersonality: values.brandPersonality,
-        contentPreferences: {}
+        contentPreferences: values.contentPreferences
       });
     } catch (error) {
       console.error('Error creating agent:', error);
