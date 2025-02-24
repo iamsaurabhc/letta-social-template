@@ -18,7 +18,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-8 w-12 stroke-[3.5] relative z-10 bg-gradient-to-r from-blue-500 to-indigo-500 [background-clip:text] text-indigo-500" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[280px] p-0">
