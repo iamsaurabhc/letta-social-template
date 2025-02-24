@@ -87,6 +87,17 @@ const getPreferenceDescription = (key: string): string => {
   return descriptions[key] || "No description available";
 };
 
+const getPreferenceLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    includeNewsUpdates: "Link latest keyword related news",
+    includeIndustryTrends: "Monitor industry trends",
+    repurposeWebContent: "Repurpose website content",
+    engagementMonitoring: "Monitor engagement patterns"
+  };
+  
+  return labels[key] || key;
+};
+
 export default function CreateAgent({ onNext, readOnly = false, initialData }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -95,13 +106,13 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
     defaultValues: initialData ? {
       name: initialData.name,
       description: initialData.description || "",
-      websiteUrl: initialData.websiteUrl || "",
+      websiteUrl: initialData.website_url || "",
       industry: parseArrayField(initialData.industry),
-      targetAudience: Array.isArray(initialData?.targetAudience) 
-        ? initialData.targetAudience 
+      targetAudience: Array.isArray(initialData?.target_audience) 
+        ? initialData.target_audience 
         : [],
-      brandPersonality: parseArrayField(initialData.brandPersonality),
-      contentPreferences: parseContentPreferences(initialData.contentPreferences)
+      brandPersonality: initialData.brand_personality || [],
+      contentPreferences: parseContentPreferences(initialData.content_preferences)
     } : {
       name: "",
       description: "",
@@ -229,7 +240,7 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
             <div>
               <Label>Brand Personality</Label>
               <div className="flex flex-wrap gap-2 mt-2">
-                {brandPersonalities.map((trait: string) => (
+                {brandPersonalities?.map((trait: string) => (
                   <div 
                     key={trait} 
                     className="bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-medium"
@@ -249,26 +260,20 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(preferences).map(([key, value]) => {
-              const label = {
-                includeNewsUpdates: 'Link latest keyword related news',
-                includeIndustryTrends: 'Monitor industry trends',
-                repurposeWebContent: 'Repurpose website content',
-                engagementMonitoring: 'Monitor engagement patterns'
-              }[key] || key;
-
-              return (
-                <div key={key} className="flex items-start space-x-3">
-                  <div className={`h-4 w-4 mt-1 rounded border ${value ? 'bg-primary border-primary' : 'bg-muted'}`} />
-                  <div>
-                    <Label>{label}</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {getPreferenceDescription(key)}
-                    </p>
-                  </div>
+            {Object.entries(preferences).filter(([key]) => key !== 'updatedAt').map(([key, value]) => (
+              <div key={key} className="flex flex-row items-center space-x-3 space-y-0">
+                <Checkbox
+                  checked={value}
+                  disabled
+                />
+                <div className="space-y-1 leading-none">
+                  <Label>{getPreferenceLabel(key)}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {getPreferenceDescription(key)}
+                  </p>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -309,11 +314,11 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
         id: response.data.id,
         name: values.name,
         description: values.description,
-        websiteUrl: values.websiteUrl,
+        website_url: values.websiteUrl,
         industry: values.industry,
-        targetAudience: values.targetAudience,
-        brandPersonality: values.brandPersonality,
-        contentPreferences: values.contentPreferences
+        target_audience: values.targetAudience,
+        brand_personality: values.brandPersonality,
+        content_preferences: values.contentPreferences
       });
     } catch (error) {
       console.error('Error creating agent:', error);
