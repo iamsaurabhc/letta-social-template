@@ -11,6 +11,7 @@ import { SupabaseModule } from '../../supabase/supabase.module';
 import { TwitterAuthController } from './twitter/controllers/auth.controller';
 import { TwitterAuthService } from './twitter/services/auth.service';
 import { TwitterApiService } from './twitter/services/twitter-api.service';
+import { AuthModule } from '../../auth/auth.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { TwitterApiService } from './twitter/services/twitter-api.service';
       name: 'website-scraping',
     }),
     LettaModule,
-    SupabaseModule
+    SupabaseModule,
+    AuthModule
   ],
   controllers: [
     UserAgentController,

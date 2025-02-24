@@ -51,8 +51,21 @@ export class AuthService {
   }
 
   async validateToken(token: string) {
-    const { data: { user }, error } = await this.supabase.auth.getUser(token);
-    if (error) throw error;
-    return user;
+    try {
+      const { data: { user }, error } = await this.supabase.auth.getUser(token);
+      
+      if (error || !user) {
+        this.logger.error('Token validation error:', error);
+        throw new UnauthorizedException('Invalid token');
+      }
+
+      return {
+        id: user.id,
+        email: user.email
+      };
+    } catch (error) {
+      this.logger.error('Token validation error:', error);
+      throw new UnauthorizedException('Invalid token');
+    }
   }
 } 

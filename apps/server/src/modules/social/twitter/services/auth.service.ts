@@ -22,19 +22,26 @@ export class TwitterAuthService {
       throw new Error('Twitter configuration is missing');
     }
 
-    this.oauth = new (OAuth as any)({
+    this.logger.debug(`Initializing Twitter OAuth with consumer key: ${consumerKey.substring(0, 5)}...`);
+
+    this.oauth = new OAuth({
       consumer: {
         key: consumerKey,
-        secret: consumerSecret,
+        secret: consumerSecret
       },
       signature_method: 'HMAC-SHA1',
-      hash_function(baseString: string, key: string) {
+      hash_function: (baseString: string, key: string) => {
         return createHmac('sha1', key).update(baseString).digest('base64');
-      },
+      }
     });
   }
 
-  async getAuthorizationUrl(): Promise<string> {
+  async getAuthorizationUrl(userId: string, agentId: string): Promise<string> {
+    if (!userId || !agentId) {
+      this.logger.error('Missing required parameters');
+      throw new Error('User ID and Agent ID are required');
+    }
+
     try {
       const serverUrl = this.configService.get('SERVER_URL');
       if (!serverUrl) {
@@ -46,17 +53,23 @@ export class TwitterAuthService {
 
       const requestTokenUrl = 'https://api.twitter.com/oauth/request_token';
       
-      // Match the exact request format from old_twitter.ts (lines 11-23)
+      const state = JSON.stringify({ userId, agentId });
+      
       const requestData = {
         url: requestTokenUrl,
         method: 'POST',
-        data: { oauth_callback: callbackUrl } // This is critical for signature
+        data: { 
+          oauth_callback: callbackUrl,
+          state: encodeURIComponent(state)
+        }
       };
 
-      // Generate authorization headers with callback included
       const authHeaders = this.oauth.toHeader(
         this.oauth.authorize(requestData)
       );
+
+      this.logger.debug(`Request headers: ${JSON.stringify(authHeaders)}`);
+      this.logger.debug(`Making request to: ${requestTokenUrl}`);
 
       const response = await fetch(requestTokenUrl, {
         method: 'POST',
@@ -80,7 +93,7 @@ export class TwitterAuthService {
         throw new Error('Failed to get OAuth token');
       }
 
-      return `https://api.twitter.com/oauth/authorize?oauth_token=${oauth_token}`;
+      return `https://api.twitter.com/oauth/authorize?oauth_token=${oauth_token}&state=${encodeURIComponent(state)}`;
     } catch (error) {
       this.logger.error('Failed to get authorization URL:', error);
       throw error;
@@ -88,11 +101,13 @@ export class TwitterAuthService {
   }
 
   async handleCallback(
-    userId: string,
+    state: string,
     oauthToken: string,
     oauthVerifier: string
-  ): Promise<any> {
+  ): Promise<{ redirectUrl: string }> {
     try {
+      const { userId, agentId } = JSON.parse(state);
+      
       const accessTokenURL = 'https://api.twitter.com/oauth/access_token';
       const requestData = {
         url: accessTokenURL,
@@ -126,9 +141,11 @@ export class TwitterAuthService {
         .from('social_connections')
         .insert({
           user_id: userId,
+          agent_id: agentId,
           platform: 'twitter',
           access_token: accessToken,
           refresh_token: refreshToken,
+          username: params.get('screen_name'),
           token_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           platform_settings: {}
         });
@@ -139,11 +156,19 @@ export class TwitterAuthService {
       }
 
       // Return the Twitter data along with saving to DB
-      return {
+      const twitterData = {
         token: accessToken,
         tokenSecret: refreshToken,
         id: userId,
         username: params.get('screen_name')
+      };
+
+      const clientUrl = this.configService.get('CLIENT_URL');
+      const encodedData = encodeURIComponent(JSON.stringify(twitterData));
+      
+      // Return the URL instead of redirecting
+      return {
+        redirectUrl: `${clientUrl}/dashboard/automation?step=social&status=success&twitterData=${encodedData}&agentId=${agentId}`
       };
     } catch (error) {
       this.logger.error('Twitter callback error:', error);

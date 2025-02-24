@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/utils/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   onNext: (data: { connections: SocialConnection[], inspirationUrls: string[] }) => void;
@@ -29,6 +30,7 @@ const PLATFORMS = [
 export default function LinkSocial({ onNext }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { toast } = useToast();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
 
@@ -37,10 +39,30 @@ export default function LinkSocial({ onNext }: Props) {
     const status = searchParams.get('status');
     const step = searchParams.get('step');
     const twitterData = searchParams.get('twitterData');
+    const errorMessage = searchParams.get('message');
 
-    if (twitterData) {
+    if (errorMessage) {
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: decodeURIComponent(errorMessage)
+      });
+      
+      // Clean up URL params
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('status');
+      newUrl.searchParams.delete('message');
+      router.replace(newUrl.toString());
+    } else if (twitterData) {
       try {
         const parsedData = JSON.parse(twitterData);
+        // Update connections with username
+        setConnections(prev => [...prev, {
+          platform: 'twitter',
+          username: parsedData.username,
+          settings: {}
+        }]);
+        
         // Remove the twitterData from the URL
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete('twitterData');
@@ -54,7 +76,7 @@ export default function LinkSocial({ onNext }: Props) {
     } else if (step === 'social' && status === 'success') {
       fetchConnections();
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const fetchConnections = async () => {
     try {
@@ -67,18 +89,39 @@ export default function LinkSocial({ onNext }: Props) {
 
   const handleTwitterAuth = async () => {
     try {
-      const response = await api.get('/social/twitter/auth/url');
+      // Get the agent ID from URL params
+      const agentId = searchParams.get('agentId');
+      if (!agentId) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No agent selected. Please create an agent first."
+        });
+        return;
+      }
+
+      const response = await api.get(`/social/twitter/auth/url?agentId=${agentId}`);
+      
       if (response.data?.url) {
         // Store current state before redirecting
         localStorage.setItem('twitter_auth_pending', 'true');
+        localStorage.setItem('twitter_auth_agent_id', agentId);
         
-        // Redirect to Twitter auth page
         window.location.href = response.data.url;
       } else {
-        console.error('No URL returned from auth endpoint');
+        toast({
+          variant: "destructive",
+          title: "Connection Failed",
+          description: "Failed to get Twitter authorization URL"
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get auth URL:', error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: error.response?.data?.message || "Failed to connect to Twitter"
+      });
     }
   };
 
@@ -107,9 +150,9 @@ export default function LinkSocial({ onNext }: Props) {
               </CardTitle>
               <CardDescription>
                 {isConnected(platform.id) 
-                  ? "Connected" 
-                  : "Not connected"}
-              </CardDescription>
+                ? `Connected as @${connections.find(c => c.platform === platform.id)?.username || ''}` 
+                : "Not connected"}
+            </CardDescription>
             </CardHeader>
             <CardContent>
               <Button

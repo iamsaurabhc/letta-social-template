@@ -1,16 +1,15 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Users, Share2, Zap, PlusCircle } from "lucide-react";
+import { Activity, Users, Share2, Zap } from "lucide-react";
 import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { AutomationModal } from "@/components/automation/AutomationModal";
 import { AutomationStatus } from "@/components/automation/AutomationStatus";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import api from '@/utils/api';
 
 export default function DashboardPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [incompleteAutomations, setIncompleteAutomations] = useState<{
+    id: string;
     agentName: string;
     hasSocialConnections: boolean;
     hasTriggers: boolean;
@@ -24,6 +23,7 @@ export default function DashboardPage() {
         
         if (data.incompleteAgent) {
           setIncompleteAutomations({
+            id: data.incompleteAgent.id,
             agentName: data.incompleteAgent.name,
             hasSocialConnections: data.incompleteAgent.hasSocialConnections,
             hasTriggers: data.incompleteAgent.hasTriggers
@@ -38,29 +38,22 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
-        <Button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Add Automation
-        </Button>
-      </div>
-
-      {incompleteAutomations && (
-        <AutomationStatus {...incompleteAutomations} />
-      )}
-
-      <AutomationModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <DashboardHeader />
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      {incompleteAutomations && (
+        <div className="my-6">
+          <AutomationStatus
+            agentId={incompleteAutomations.id}
+            agentName={incompleteAutomations.agentName}
+            hasSocialConnections={incompleteAutomations.hasSocialConnections}
+            hasTriggers={incompleteAutomations.hasTriggers}
+          />
+        </div>
+      )}
+      
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -73,7 +66,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Connected Accounts</CardTitle>
             <Share2 className="h-4 w-4 text-muted-foreground" />
@@ -86,7 +79,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Engagement</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -99,7 +92,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Automated Posts</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />

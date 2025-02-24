@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import { User } from '../../../auth/decorators/user.decorator';
 import { UserAgentService } from '../services/user-agent.service';
@@ -23,6 +23,9 @@ export class UserAgentController {
 
   @Get('status')
   async getStatus(@User('sub') userId: string) {
+    if (!userId) {
+      throw new UnauthorizedException('User ID not found');
+    }
     return this.supabaseService.getAgentStatus(userId);
   }
 } 

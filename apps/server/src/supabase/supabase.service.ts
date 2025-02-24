@@ -33,7 +33,6 @@ export class SupabaseService {
 
   async getAgentStatus(userId: string) {
     try {
-      // Get the most recently created agent for this user
       const { data: agent, error } = await this.supabaseClient
         .from('user_agents')
         .select(`
@@ -59,6 +58,7 @@ export class SupabaseService {
 
       return {
         incompleteAgent: {
+          id: agent.id,
           name: agent.name,
           hasSocialConnections: agent.social_connections.length > 0,
           hasTriggers: agent.social_connections.some(conn => conn.posting_mode === 'automatic')

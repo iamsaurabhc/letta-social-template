@@ -20,8 +20,12 @@ import { AuthController } from './auth.controller';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, SupabaseStrategy, JwtAuthGuard],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    SupabaseStrategy
+  ],
   controllers: [AuthController],
-  exports: [JwtAuthGuard, JwtModule],
+  exports: [JwtAuthGuard, AuthService],
 })
 export class AuthModule {} 
