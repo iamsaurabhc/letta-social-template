@@ -92,7 +92,7 @@ export default function AgentsPage() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Created {new Date(agent.created_at).toLocaleDateString()}
+                  Created {agent.created_at ? new Date(agent.created_at).toLocaleDateString() : 'N/A'}
                 </p>
               </div>
             </CardContent>
