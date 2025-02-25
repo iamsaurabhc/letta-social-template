@@ -87,12 +87,17 @@ export function AutomationStatus({
   agentId 
 }: AutomationStatusProps) {
   const router = useRouter();
-  const startingStep = !hasSocialConnections ? 'social' : 'trigger';
+  const incompleteAgent = useAgentStore((state) => state.incompleteAgent);
   const isLoading = useAgentStore((state) => state.isLoading);
+
+  // Don't show the card if all steps are completed
+  if (hasSocialConnections && hasTriggers) {
+    return null;
+  }
 
   const handleContinueSetup = () => {
     try {
-      router.push(`/dashboard/automation?step=${startingStep}&agentId=${agentId}`);
+      router.push(`/dashboard/automation?step=${!hasSocialConnections ? 'social' : 'trigger'}&agentId=${agentId}`);
     } catch (error) {
       console.error('Navigation error:', error);
     }

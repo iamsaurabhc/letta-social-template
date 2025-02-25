@@ -39,6 +39,7 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import api from "@/utils/api";
 import { ChevronRight, AlertCircle } from "lucide-react";
+import { useAgentStore } from "@/stores/agentStore";
 
 const triggerFormSchema = z.object({
   postingMode: z.enum(['automatic', 'manual_approval']),
@@ -128,8 +129,10 @@ export default function CreateTrigger({ onFinish }: Props) {
         return;
       }
 
-      // Save trigger settings to the backend
       await api.post(`/social/agents/${agentId}/triggers`, values);
+      
+      // Update store with completion status
+      useAgentStore.getState().updateStepCompletion('trigger', true);
       
       toast({
         title: "Automation Setup Complete",

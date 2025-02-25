@@ -13,6 +13,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronRight } from "lucide-react";
+import { useAgentStore } from "@/stores/agentStore";
 
 interface Props {
   onNext: (data: { connections: SocialConnection[], inspirationUrls: string[] }) => void;
@@ -141,6 +142,9 @@ export default function LinkSocial({ onNext }: Props) {
   };
 
   const handleComplete = () => {
+    // Update store with completion status
+    useAgentStore.getState().updateStepCompletion('social', true);
+    
     onNext({
       connections: connections,
       inspirationUrls: inspirationUrls

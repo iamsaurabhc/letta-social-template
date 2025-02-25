@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ChevronRight } from "lucide-react";
 import { useState } from 'react';
+import { useAgentStore } from '@/stores/agentStore';
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -299,11 +300,10 @@ export default function CreateAgent({ onNext, readOnly = false, initialData }: P
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsSubmitting(true);
+      const response = await api.post('/social/agents', values);
       
-      const response = await api.post('/social/agents', {
-        ...values,
-        contentPreferences: values.contentPreferences
-      });
+      // Update store with completion status
+      useAgentStore.getState().updateStepCompletion('agent', true);
       
       toast({
         title: "Agent Created Successfully",
