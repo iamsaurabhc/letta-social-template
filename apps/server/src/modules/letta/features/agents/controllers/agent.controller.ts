@@ -4,6 +4,11 @@ import { JwtAuthGuard } from '../../../../../auth/guards/jwt.guard';
 import { CreateAgentDto, UpdateAgentDto } from '../dto/agent.dto';
 import { CreateArchivalMemoryDto } from '../dto/archival-memory.dto';
 import { ModifyBlockDto } from '../dto/core-memory.dto';
+import { User } from '../../../../../auth/decorators/user.decorator';
+import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
+import { UserEntity } from '@/types/user.entity';
 
 @Controller('letta/agents')
 @UseGuards(JwtAuthGuard)
@@ -139,5 +144,14 @@ export class AgentController {
     @Param('blockId') blockId: string,
   ) {
     return this.agentService.detachBlockFromCoreMemory(agentId, blockId);
+  }
+
+  @Post(':id/triggers')
+  async saveTriggers(
+    @Param('id') agentId: string,
+    @Body() triggerData: TriggerSettingsDto,
+    @User() user: UserEntity
+  ) {
+    return this.agentService.saveTriggers(agentId, triggerData, user.id);
   }
 } 

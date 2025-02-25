@@ -17,13 +17,35 @@ export interface SocialConnection {
   settings: Record<string, any>;
 }
 
+// In types.ts
 export interface TriggerData {
   postingMode: 'automatic' | 'manual_approval';
-  schedules: {
-    platform: string;
-    interval: string;
-    preferredTimes?: string[];
-  }[];
+  triggers: {
+    newPosts: {
+      enabled: boolean;
+      format: 'normal' | 'long_form' | 'both';
+      frequency: 'daily' | 'weekly' | 'custom';
+      customSchedule?: {
+        days: ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[];
+        time: string;
+      };
+      topicsOfInterest?: string[];
+    };
+    engagement: {
+      enabled: boolean;
+      replyToComments: boolean;
+      replyToMentions: boolean;
+      replyToDMs: boolean;
+    };
+    leadsGeneration: {
+      enabled: boolean;
+      // Future implementation
+    };
+    leadsNurturing: {
+      enabled: boolean;
+      // Future implementation
+    };
+  };
 }
 
 export interface AutomationStepData {

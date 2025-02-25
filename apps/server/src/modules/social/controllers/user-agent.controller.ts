@@ -4,6 +4,7 @@ import { User } from '../../../auth/decorators/user.decorator';
 import { UserAgentService } from '../services/user-agent.service';
 import { CreateUserAgentDto } from '../dto/user-agent.dto';
 import { SupabaseService } from '../../../supabase/supabase.service';
+import { AgentService } from '@/modules/letta/features/agents/services/agent.service';
 
 @Controller('social/agents')
 @UseGuards(JwtAuthGuard)
@@ -13,6 +14,7 @@ export class UserAgentController {
   constructor(
     private readonly userAgentService: UserAgentService,
     private readonly supabaseService: SupabaseService,
+    private readonly agentService: AgentService
   ) {}
 
   @Post()
@@ -37,11 +39,28 @@ export class UserAgentController {
   }
 
   @Get('stats')
-  async getStats(@User('sub') userId: string) {
-    if (!userId) {
-      throw new UnauthorizedException('User ID not found');
+  async getAgentStats(@User('sub') userId: string) {
+    try {
+      const { data, error } = await this.supabaseService.client
+        .from('user_agents')
+        .select('created_at')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const total = data.length;
+      const newThisMonth = data.filter(agent => {
+        const createdAt = new Date(agent.created_at);
+        const now = new Date();
+        return createdAt.getMonth() === now.getMonth() && 
+               createdAt.getFullYear() === now.getFullYear();
+      }).length;
+
+      return { total, newThisMonth };
+    } catch (error) {
+      this.logger.error('Error fetching agent stats:', error);
+      throw error;
     }
-    return this.supabaseService.getAgentStats(userId);
   }
 
   @Get('connections/stats')

@@ -5,11 +5,28 @@ import { LettaClient, LettaError } from '@letta-ai/letta-client';
 import { CreateAgentDto, UpdateAgentDto } from '../dto/agent.dto';
 import { CreateArchivalMemoryDto } from '../dto/archival-memory.dto';
 import { ModifyBlockDto } from '../dto/core-memory.dto';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
+import { BullQueueService } from '../../../../bull/bull-queue.service';
 
 @Injectable()
 export class AgentService extends BaseService {
-  constructor(configService: ConfigService) {
+  private readonly supabaseClient: SupabaseClient;
+
+  constructor(
+    configService: ConfigService,
+    private readonly queueService: BullQueueService
+  ) {
     super(AgentService.name, configService);
+    
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase configuration is missing');
+    }
+
+    this.supabaseClient = new SupabaseClient(supabaseUrl, supabaseKey);
   }
 
   async getAgents() {
@@ -221,5 +238,79 @@ export class AgentService extends BaseService {
       throw new InternalServerErrorException(error.message);
     }
     throw error;
+  }
+
+  async saveTriggers(agentId: string, triggerData: TriggerSettingsDto, userId: string) {
+    try {
+      // First verify agent ownership
+      const { data: agent, error: agentError } = await this.supabaseClient
+        .from('user_agents')
+        .select('id')
+        .eq('id', agentId)
+        .eq('user_id', userId)
+        .single();
+
+      if (agentError || !agent) {
+        throw new NotFoundException('Agent not found or unauthorized');
+      }
+
+      // Update social connections with new trigger settings
+      const { error: updateError } = await this.supabaseClient
+        .from('social_connections')
+        .update({
+          posting_mode: triggerData.postingMode,
+          platform_settings: triggerData.triggers
+        })
+        .eq('agent_id', agentId)
+        .eq('user_id', userId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Schedule automation jobs based on trigger settings
+      if (triggerData.triggers.newPosts?.enabled) {
+        await this.scheduleContentGeneration(agentId, triggerData.triggers.newPosts);
+      }
+
+      if (triggerData.triggers.engagement?.enabled) {
+        await this.scheduleEngagementMonitoring(agentId, triggerData.triggers.engagement);
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Failed to save triggers:', error);
+      throw error;
+    }
+  }
+
+  private async scheduleContentGeneration(agentId: string, settings: any) {
+    const jobData = {
+      agentId,
+      settings,
+      type: 'content_generation'
+    };
+
+    if (settings.frequency === 'custom') {
+      // Schedule for specific days and times
+      await this.queueService.scheduleCustom('content-generation', jobData, {
+        days: settings.customSchedule.days,
+        time: settings.customSchedule.time
+      });
+    } else {
+      // Schedule based on frequency (daily/weekly)
+      await this.queueService.scheduleRecurring('content-generation', jobData, settings.frequency);
+    }
+  }
+
+  private async scheduleEngagementMonitoring(agentId: string, settings: any) {
+    const jobData = {
+      agentId,
+      settings,
+      type: 'engagement_monitoring'
+    };
+
+    // Engagement monitoring runs more frequently
+    await this.queueService.scheduleRecurring('engagement-monitoring', jobData, 'hourly');
   }
 } 
