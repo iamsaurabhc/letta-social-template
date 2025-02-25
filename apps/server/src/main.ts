@@ -23,7 +23,7 @@ async function bootstrap() {
       app.enableCors({
         origin: [
           'http://localhost:3000',
-          'https://*.vercel.app',
+          'https://social-auto-agent.vercel.app',
           process.env.NEXT_PUBLIC_CLIENT_URL,
         ].filter(Boolean),
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
