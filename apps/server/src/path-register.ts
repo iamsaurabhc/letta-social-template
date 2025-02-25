@@ -1,9 +1,8 @@
 import { register } from 'tsconfig-paths';
-import { join } from 'path';
+import { compilerOptions } from '../tsconfig.json';
 
+// Register path aliases
 register({
-  baseUrl: join(__dirname),
-  paths: {
-    "@/*": ["*"]
-  }
+  baseUrl: compilerOptions.baseUrl,
+  paths: compilerOptions.paths
 });

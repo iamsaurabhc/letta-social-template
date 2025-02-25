@@ -2,6 +2,7 @@ import './path-register';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { GlobalExceptionFilter } from './middleware/error.middleware';
 
 const logger = new Logger('Bootstrap');
 let app;
@@ -9,16 +10,22 @@ let app;
 async function bootstrap() {
   try {
     if (!app) {
-      app = await NestFactory.create(AppModule);
+      app = await NestFactory.create(AppModule, {
+        logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+      });
       
-      app.useGlobalPipes(new ValidationPipe());
+      app.useGlobalPipes(new ValidationPipe({
+        transform: true,
+        whitelist: true,
+      }));
+      app.useGlobalFilters(new GlobalExceptionFilter());
       app.setGlobalPrefix('api');
       app.enableCors({
         origin: [
           'http://localhost:3000',
           'https://*.vercel.app',
           process.env.NEXT_PUBLIC_CLIENT_URL,
-        ],
+        ].filter(Boolean),
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         credentials: true,
         allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -43,7 +50,7 @@ export default async function handler(req, res) {
     }
     
     const instance = app.getHttpAdapter().getInstance();
-    return instance(req, res);
+    await instance(req, res);
   } catch (error) {
     logger.error('Error in serverless handler:', error);
     res.status(500).json({ 
