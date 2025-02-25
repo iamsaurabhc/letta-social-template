@@ -4,7 +4,7 @@ import { User } from '../../../auth/decorators/user.decorator';
 import { UserAgentService } from '../services/user-agent.service';
 import { CreateUserAgentDto } from '../dto/user-agent.dto';
 import { SupabaseService } from '../../../supabase/supabase.service';
-import { AgentService } from '@/modules/letta/features/agents/services/agent.service';
+import { AgentService } from '../../../modules/letta/features/agents/services/agent.service';
 
 @Controller('social/agents')
 @UseGuards(JwtAuthGuard)
