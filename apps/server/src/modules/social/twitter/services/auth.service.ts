@@ -1,14 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TwitterApiService } from './twitter-api.service';
-import * as OAuth from 'oauth-1.0a';
+import OAuth from 'oauth-1.0a';
 import { createHmac } from 'crypto';
 import { SupabaseService } from '@/supabase/supabase.service';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class TwitterAuthService {
-  private readonly oauth: OAuth;
+  private readonly oauth: InstanceType<typeof OAuth>;
   private readonly logger = new Logger(TwitterAuthService.name);
 
   constructor(
@@ -26,7 +26,7 @@ export class TwitterAuthService {
 
     this.logger.debug(`Initializing Twitter OAuth with consumer key: ${consumerKey.substring(0, 5)}...`);
 
-    this.oauth = new OAuth({
+    this.oauth = new (OAuth as any)({
       consumer: {
         key: consumerKey,
         secret: consumerSecret

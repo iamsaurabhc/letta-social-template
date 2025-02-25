@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as OAuth from 'oauth-1.0a';
+import OAuth from 'oauth-1.0a';
 import crypto from 'crypto';
 import { TwitterAuth, TwitterResponse } from '../interfaces/twitter.interface';
 
@@ -9,10 +9,10 @@ export class TwitterApiService {
   private readonly logger = new Logger(TwitterApiService.name);
   private readonly TWITTER_API_BASE = 'https://api.twitter.com/2';
   private readonly TWITTER_UPLOAD_API_BASE = 'https://upload.twitter.com/1.1';
-  private readonly oauth: OAuth;
+  private readonly oauth: InstanceType<typeof OAuth>;
 
   constructor(private readonly configService: ConfigService) {
-    this.oauth = new OAuth({
+    this.oauth = new (OAuth as any)({
       consumer: {
         key: this.configService.get<string>('TWITTER_CONSUMER_KEY'),
         secret: this.configService.get<string>('TWITTER_CONSUMER_SECRET'),
