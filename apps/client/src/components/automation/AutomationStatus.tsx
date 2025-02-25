@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle2, AlertCircle, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ErrorBoundary } from "react-error-boundary";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAgentStore } from "@/stores/agentStore";
 
 interface AutomationStatusProps {
   agentName: string;
@@ -52,6 +54,32 @@ const FallbackComponent = () => (
   </Card>
 );
 
+const LoadingState = () => (
+  <Card className="border-dashed">
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Skeleton className="h-6 w-[200px]" />
+      </CardTitle>
+      <CardDescription>
+        <Skeleton className="h-4 w-[300px]" />
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <Skeleton className="h-4 w-[150px]" />
+            </div>
+            <Skeleton className="h-4 w-[80px]" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export function AutomationStatus({ 
   agentName, 
   hasSocialConnections, 
@@ -60,6 +88,7 @@ export function AutomationStatus({
 }: AutomationStatusProps) {
   const router = useRouter();
   const startingStep = !hasSocialConnections ? 'social' : 'trigger';
+  const isLoading = useAgentStore((state) => state.isLoading);
 
   const handleContinueSetup = () => {
     try {
@@ -68,6 +97,10 @@ export function AutomationStatus({
       console.error('Navigation error:', error);
     }
   };
+
+  if (isLoading) {
+    return <LoadingState />;
+  }
 
   return (
     <ErrorBoundary FallbackComponent={FallbackComponent}>

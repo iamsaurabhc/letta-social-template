@@ -6,14 +6,15 @@ import { useState, useEffect } from 'react';
 import { AutomationStatus } from "@/components/automation/AutomationStatus";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import api from '@/utils/api';
+import { useAgentStore } from '@/stores/agentStore';
 
 export default function DashboardPage() {
-  const [incompleteAutomations, setIncompleteAutomations] = useState<{
-    id: string;
-    agentName: string;
-    hasSocialConnections: boolean;
-    hasTriggers: boolean;
-  } | null>(null);
+  const { 
+    incompleteAgent, 
+    setIncompleteAgent, 
+    setLoading, 
+    isLoading 
+  } = useAgentStore();
 
   const [agentStats, setAgentStats] = useState<{
     total: number;
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const [automationResponse, statsResponse, connectionsResponse] = await Promise.all([
           api.get('/social/agents/status'),
           api.get('/social/agents/stats'),
@@ -41,41 +43,45 @@ export default function DashboardPage() {
         ]);
         
         if (automationResponse.data?.incompleteAgent) {
-          setIncompleteAutomations({
+          setIncompleteAgent({
             id: automationResponse.data.incompleteAgent.id,
             agentName: automationResponse.data.incompleteAgent.name,
             hasSocialConnections: automationResponse.data.incompleteAgent.hasSocialConnections,
             hasTriggers: automationResponse.data.incompleteAgent.hasTriggers
           });
         } else {
-          setIncompleteAutomations(null);
+          setIncompleteAgent(null);
         }
 
         setAgentStats(statsResponse.data || { total: 0, newThisMonth: 0 });
         setConnectionStats(connectionsResponse.data || { total: 0, platformCount: 0 });
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
-        // Set default values on error
-        setIncompleteAutomations(null);
+        setIncompleteAgent(null);
         setAgentStats({ total: 0, newThisMonth: 0 });
         setConnectionStats({ total: 0, platformCount: 0 });
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
+    // Only fetch if we don't have data already
+    if (!incompleteAgent) {
+      fetchData();
+    }
   }, []);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <DashboardHeader />
       
-      {incompleteAutomations && (
+      {incompleteAgent && (
         <div className="my-6">
           <AutomationStatus
-            agentId={incompleteAutomations.id}
-            agentName={incompleteAutomations.agentName}
-            hasSocialConnections={incompleteAutomations.hasSocialConnections}
-            hasTriggers={incompleteAutomations.hasTriggers}
+            agentId={incompleteAgent.id}
+            agentName={incompleteAgent.agentName}
+            hasSocialConnections={incompleteAgent.hasSocialConnections}
+            hasTriggers={incompleteAgent.hasTriggers}
           />
         </div>
       )}

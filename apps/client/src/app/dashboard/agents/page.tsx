@@ -8,29 +8,34 @@ import { useRouter } from 'next/navigation';
 import api from '@/utils/api';
 import { AgentDetailsModal } from '@/components/agents/AgentDetailsModal';
 import { AgentData } from '@/components/automation/AutomationModal/types';
+import { useAgentStore } from '@/stores/agentStore';
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<AgentData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { agents, setAgents, setLoading, isLoading } = useAgentStore();
   const [selectedAgent, setSelectedAgent] = useState<AgentData | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const fetchAgents = async () => {
       try {
+        setLoading(true);
         const response = await api.get('/social/agents');
         setAgents(response.data || []);
       } catch (error) {
         console.error('Failed to fetch agents:', error);
+        setAgents([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAgents();
+    // Only fetch if we don't have agents data
+    if (agents.length === 0) {
+      fetchAgents();
+    }
   }, []);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
