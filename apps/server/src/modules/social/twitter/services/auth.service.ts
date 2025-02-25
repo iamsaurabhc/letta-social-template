@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { TwitterApiService } from './twitter-api.service';
 import OAuth from 'oauth-1.0a';
 import { createHmac } from 'crypto';
-import { SupabaseService } from '@/supabase/supabase.service';
+import { SupabaseService } from '../../../../supabase/supabase.service';
 import * as crypto from 'crypto';
 
 @Injectable()

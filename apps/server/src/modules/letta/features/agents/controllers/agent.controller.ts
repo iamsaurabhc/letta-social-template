@@ -5,10 +5,8 @@ import { CreateAgentDto, UpdateAgentDto } from '../dto/agent.dto';
 import { CreateArchivalMemoryDto } from '../dto/archival-memory.dto';
 import { ModifyBlockDto } from '../dto/core-memory.dto';
 import { User } from '../../../../../auth/decorators/user.decorator';
-import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
-import { UserEntity } from '@/types/user.entity';
+import { UserEntity } from '../../../../../types/user.entity';
 
 @Controller('letta/agents')
 @UseGuards(JwtAuthGuard)

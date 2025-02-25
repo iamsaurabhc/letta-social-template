@@ -1,7 +1,7 @@
 import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import type { Request } from 'express';
-import { JwtAuthGuard } from '@/auth/guards/jwt.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 
 interface AuthenticatedRequest extends Request {
   user?: {

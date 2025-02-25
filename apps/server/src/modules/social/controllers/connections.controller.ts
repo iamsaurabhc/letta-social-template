@@ -1,7 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '@/auth/guards/jwt.guard';
-import { User } from '@/auth/decorators/user.decorator';
-import { SupabaseService } from '@/supabase/supabase.service';
+import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
+import { User } from '../../../auth/decorators/user.decorator';
+import { SupabaseService } from '../../../supabase/supabase.service';
 
 @Controller('social/connections')
 @UseGuards(JwtAuthGuard)
