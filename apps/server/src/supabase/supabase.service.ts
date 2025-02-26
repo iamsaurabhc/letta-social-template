@@ -59,12 +59,19 @@ export class SupabaseService {
         return { incompleteAgent: null };
       }
 
+      // Check if platform_settings exists and has triggers configured
+      const hasTriggers = agent.social_connections.some(conn => 
+        conn.platform_settings && 
+        (conn.platform_settings.newPosts?.enabled || 
+         conn.platform_settings.engagement?.enabled)
+      );
+
       return {
         incompleteAgent: {
           id: agent.id,
           name: agent.name,
           hasSocialConnections: agent.social_connections.length > 0,
-          hasTriggers: agent.social_connections.some(conn => conn.posting_mode === 'automatic')
+          hasTriggers: hasTriggers
         }
       };
     } catch (error) {

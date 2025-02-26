@@ -5,6 +5,7 @@ import { Activity, Users, Share2, Zap } from "lucide-react";
 import { useState, useEffect } from 'react';
 import { AutomationStatus } from "@/components/automation/AutomationStatus";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { AgentDetailCard } from "@/components/agents/AgentDetailCard";
 import api from '@/utils/api';
 import { useAgentStore } from '@/stores/agentStore';
 
@@ -15,6 +16,10 @@ export default function DashboardPage() {
     setLoading, 
     isLoading 
   } = useAgentStore();
+  
+  const [completedAgent, setCompletedAgent] = useState(null);
+  const [triggerDetails, setTriggerDetails] = useState(null);
+  const [postingMode, setPostingMode] = useState<'automatic' | 'manual_approval'>('manual_approval');
 
   const [agentStats, setAgentStats] = useState<{
     total: number;
@@ -43,12 +48,46 @@ export default function DashboardPage() {
         ]);
         
         if (automationResponse.data?.incompleteAgent) {
-          setIncompleteAgent({
-            id: automationResponse.data.incompleteAgent.id,
-            agentName: automationResponse.data.incompleteAgent.name,
-            hasSocialConnections: automationResponse.data.incompleteAgent.hasSocialConnections,
-            hasTriggers: automationResponse.data.incompleteAgent.hasTriggers
-          });
+          const agentId = automationResponse.data.incompleteAgent.id;
+          
+          // Check if the agent has both social connections and triggers
+          if (automationResponse.data.incompleteAgent.hasSocialConnections && 
+              automationResponse.data.incompleteAgent.hasTriggers) {
+            // This is a completed agent, fetch full details
+            try {
+              const agentDetailsResponse = await api.get(`/social/agents/${agentId}`);
+              setCompletedAgent(agentDetailsResponse.data);
+              
+              // Fetch trigger details
+              const socialConnectionsResponse = await api.get(`/social/agents/${agentId}/connections`);
+              console.log(socialConnectionsResponse.data);
+              if (socialConnectionsResponse.data && socialConnectionsResponse.data.length > 0) {
+                const connection = socialConnectionsResponse.data[0];
+                setTriggerDetails(connection.platform_settings);
+                setPostingMode(connection.posting_mode);
+              }
+              
+              // Clear incomplete agent since it's now complete
+              setIncompleteAgent(null);
+            } catch (error) {
+              console.error('Failed to fetch agent details:', error);
+              // Fall back to showing incomplete agent
+              setIncompleteAgent({
+                id: automationResponse.data.incompleteAgent.id,
+                agentName: automationResponse.data.incompleteAgent.name,
+                hasSocialConnections: automationResponse.data.incompleteAgent.hasSocialConnections,
+                hasTriggers: automationResponse.data.incompleteAgent.hasTriggers
+              });
+            }
+          } else {
+            // This is truly an incomplete agent
+            setIncompleteAgent({
+              id: automationResponse.data.incompleteAgent.id,
+              agentName: automationResponse.data.incompleteAgent.name,
+              hasSocialConnections: automationResponse.data.incompleteAgent.hasSocialConnections,
+              hasTriggers: automationResponse.data.incompleteAgent.hasTriggers
+            });
+          }
         } else {
           setIncompleteAgent(null);
         }
@@ -58,6 +97,7 @@ export default function DashboardPage() {
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
         setIncompleteAgent(null);
+        setCompletedAgent(null);
         setAgentStats({ total: 0, newThisMonth: 0 });
         setConnectionStats({ total: 0, platformCount: 0 });
       } finally {
@@ -65,10 +105,7 @@ export default function DashboardPage() {
       }
     };
 
-    // Only fetch if we don't have data already
-    if (!incompleteAgent) {
-      fetchData();
-    }
+    fetchData();
   }, []);
 
   return (
@@ -83,6 +120,19 @@ export default function DashboardPage() {
             hasSocialConnections={incompleteAgent.hasSocialConnections}
             hasTriggers={incompleteAgent.hasTriggers}
           />
+        </div>
+      )}
+      
+      {completedAgent && (
+        <div className="my-6">
+          <h2 className="text-xl font-bold mb-4">Your Active Agent</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <AgentDetailCard 
+              agent={completedAgent} 
+              triggerDetails={triggerDetails}
+              postingMode={postingMode}
+            />
+          </div>
         </div>
       )}
       
