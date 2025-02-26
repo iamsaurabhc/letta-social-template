@@ -25,6 +25,7 @@ export interface TriggerData {
       enabled: boolean;
       format: 'normal' | 'long_form' | 'both';
       frequency: 'daily' | 'weekly' | 'custom';
+      postsPerPeriod: number;
       customSchedule?: {
         days: ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[];
         time: string;

@@ -48,6 +48,7 @@ const triggerFormSchema = z.object({
       enabled: z.boolean(),
       format: z.enum(['normal', 'long_form', 'both']).optional(),
       frequency: z.enum(['daily', 'weekly', 'custom']).optional(),
+      postsPerPeriod: z.number().min(1).max(20).default(5),
       customSchedule: z.object({
         days: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
         time: z.string().optional(),
@@ -89,6 +90,7 @@ export default function CreateTrigger({ onFinish }: Props) {
           enabled: false,
           format: 'normal',
           frequency: 'daily',
+          postsPerPeriod: 5,
           customSchedule: {
             days: ['monday', 'wednesday', 'friday'],
             time: '09:00',
@@ -303,6 +305,63 @@ export default function CreateTrigger({ onFinish }: Props) {
                             <SelectItem value="custom">Custom Schedule</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="triggers.newPosts.postsPerPeriod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Posts Per {watchFrequency === 'daily' ? 'Day' : watchFrequency === 'weekly' ? 'Week' : 'Period'}</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                if (field.value > 1) {
+                                  field.onChange(field.value - 1);
+                                }
+                              }}
+                            >
+                              -
+                            </Button>
+                            <input
+                              type="number"
+                              className="flex h-10 w-16 rounded-md border border-input bg-background px-3 py-2 text-sm text-center ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              min={1}
+                              max={20}
+                              {...field}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (value >= 1 && value <= 20) {
+                                  field.onChange(value);
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                if (field.value < 20) {
+                                  field.onChange(field.value + 1);
+                                }
+                              }}
+                            >
+                              +
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Number of posts to generate per {watchFrequency === 'daily' ? 'day' : watchFrequency === 'weekly' ? 'week' : 'period'}
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

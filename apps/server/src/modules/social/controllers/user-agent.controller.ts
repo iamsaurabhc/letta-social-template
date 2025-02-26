@@ -1,10 +1,11 @@
-import { Controller, Post, Body, UseGuards, Get, UnauthorizedException, Logger } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, UnauthorizedException, Logger, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../auth/guards/jwt.guard';
 import { User } from '../../../auth/decorators/user.decorator';
 import { UserAgentService } from '../services/user-agent.service';
 import { CreateUserAgentDto } from '../dto/user-agent.dto';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { AgentService } from '../../../modules/letta/features/agents/services/agent.service';
+import { TriggerSettingsDto } from '../dto/trigger.dto';
 
 @Controller('social/agents')
 @UseGuards(JwtAuthGuard)
@@ -99,5 +100,14 @@ export class UserAgentController {
       this.logger.error('Error fetching agents:', error);
       throw error;
     }
+  }
+
+  @Post(':id/triggers')
+  async saveTriggers(
+    @Param('id') agentId: string,
+    @Body() triggerData: TriggerSettingsDto,
+    @User('sub') userId: string
+  ) {
+    return this.agentService.saveTriggers(agentId, triggerData, userId);
   }
 } 

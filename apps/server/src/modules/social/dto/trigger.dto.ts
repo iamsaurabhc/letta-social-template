@@ -1,4 +1,4 @@
-import { IsEnum, IsObject, IsBoolean, IsOptional, IsArray, IsString, ValidateNested } from 'class-validator';
+import { IsEnum, IsObject, IsBoolean, IsOptional, IsArray, IsString, ValidateNested, IsNumber } from 'class-validator';
 import { Type as TransformType } from 'class-transformer';
 
 export enum PostingMode {
@@ -36,6 +36,10 @@ export class NewPostsSettingsDto {
   @IsArray()
   @IsString({ each: true })
   topicsOfInterest?: string[];
+  
+  @IsOptional()
+  @IsNumber()
+  postsPerPeriod?: number;
 }
 
 export class EngagementSettingsDto {

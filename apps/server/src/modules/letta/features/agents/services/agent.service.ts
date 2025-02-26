@@ -295,11 +295,12 @@ export class AgentService extends BaseService {
       // Schedule for specific days and times
       await this.queueService.scheduleCustom('content-generation', jobData, {
         days: settings.customSchedule.days,
-        time: settings.customSchedule.time
+        time: settings.customSchedule.time,
+        postsPerPeriod: settings.postsPerPeriod || 5 // Default to 5 if not specified
       });
     } else {
       // Schedule based on frequency (daily/weekly)
-      await this.queueService.scheduleRecurring('content-generation', jobData, settings.frequency);
+      await this.queueService.scheduleRecurring('content-generation', jobData, settings.frequency, settings.postsPerPeriod || 5);
     }
   }
 

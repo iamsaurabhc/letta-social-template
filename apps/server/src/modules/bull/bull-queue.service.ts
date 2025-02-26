@@ -11,7 +11,7 @@ export class BullQueueService {
     @InjectQueue('engagement-monitoring') private engagementMonitoringQueue: Queue,
   ) {}
 
-  async scheduleCustom(queueName: string, data: any, schedule: { days: string[], time: string }) {
+  async scheduleCustom(queueName: string, data: any, schedule: { days: string[], time: string, postsPerPeriod?: number }) {
     const queue = this.getQueue(queueName);
     const [hours, minutes] = schedule.time.split(':');
     
@@ -19,14 +19,20 @@ export class BullQueueService {
     const cronDays = schedule.days.map(day => day.substring(0, 3)).join(',');
     const cronPattern = `${minutes} ${hours} * * ${cronDays}`;
     
-    await queue.add(data, {
+    // Add postsPerPeriod to the data
+    const jobData = {
+      ...data,
+      postsPerPeriod: schedule.postsPerPeriod || 5
+    };
+    
+    await queue.add(jobData, {
       repeat: {
         cron: cronPattern
       }
     });
   }
 
-  async scheduleRecurring(queueName: string, data: any, frequency: string) {
+  async scheduleRecurring(queueName: string, data: any, frequency: string, postsPerPeriod: number = 5) {
     const queue = this.getQueue(queueName);
     let repeat: any = {};
 
@@ -44,7 +50,13 @@ export class BullQueueService {
         throw new Error(`Unsupported frequency: ${frequency}`);
     }
 
-    await queue.add(data, { repeat });
+    // Add postsPerPeriod to the data
+    const jobData = {
+      ...data,
+      postsPerPeriod
+    };
+
+    await queue.add(jobData, { repeat });
   }
 
   private getQueue(name: string): Queue {

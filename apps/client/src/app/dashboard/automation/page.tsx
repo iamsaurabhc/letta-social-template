@@ -115,18 +115,26 @@ export default function AutomationPage() {
       </div>
 
       <Tabs value={currentStep} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="agent">
+        <TabsList className="grid w-full grid-cols-3 mb-6 p-1.5 bg-secondary/50">
+          <TabsTrigger 
+            value="agent"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white"
+          >
             <span className="hidden md:inline">Create Agent</span>
             <span className="md:hidden">Agent</span>
           </TabsTrigger>
-          <TabsTrigger value="social" disabled={!stepData.agent}>
+          <TabsTrigger 
+            value="social" 
+            disabled={!stepData.agent}
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white"
+          >
             <span className="hidden md:inline">Link Social</span>
             <span className="md:hidden">Socials</span>
           </TabsTrigger>
           <TabsTrigger 
             value="trigger" 
             disabled={!stepData.agent || stepData.socialConnections.length === 0}
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white"
           >
             <span className="hidden md:inline">Setup Triggers</span>
             <span className="md:hidden">Triggers</span>
