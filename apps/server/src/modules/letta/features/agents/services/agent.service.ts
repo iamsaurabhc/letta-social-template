@@ -6,7 +6,7 @@ import { CreateAgentDto, UpdateAgentDto } from '../dto/agent.dto';
 import { CreateArchivalMemoryDto } from '../dto/archival-memory.dto';
 import { ModifyBlockDto } from '../dto/core-memory.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
+import { TriggersDto, TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
 import { BullQueueService } from '../../../../bull/bull-queue.service';
 
 @Injectable()
@@ -242,6 +242,8 @@ export class AgentService extends BaseService {
 
   async saveTriggers(agentId: string, triggerData: TriggerSettingsDto, userId: string) {
     try {
+      this.logger.log(`Saving triggers for agent ${agentId}`);
+      
       // First verify agent ownership
       const { data: agent, error: agentError } = await this.supabaseClient
         .from('user_agents')
@@ -249,12 +251,14 @@ export class AgentService extends BaseService {
         .eq('id', agentId)
         .eq('user_id', userId)
         .single();
-
+  
       if (agentError || !agent) {
+        this.logger.error(`Agent not found or unauthorized: ${agentError?.message}`);
         throw new NotFoundException('Agent not found or unauthorized');
       }
-
+  
       // Update social connections with new trigger settings
+      this.logger.log('Updating social connections with trigger settings');
       const { error: updateError } = await this.supabaseClient
         .from('social_connections')
         .update({
@@ -263,44 +267,84 @@ export class AgentService extends BaseService {
         })
         .eq('agent_id', agentId)
         .eq('user_id', userId);
-
+  
       if (updateError) {
+        this.logger.error(`Error updating social connections: ${updateError.message}`);
         throw updateError;
       }
-
-      // Schedule automation jobs based on trigger settings
-      if (triggerData.triggers.newPosts?.enabled) {
-        await this.scheduleContentGeneration(agentId, triggerData.triggers.newPosts);
-      }
-
-      if (triggerData.triggers.engagement?.enabled) {
-        await this.scheduleEngagementMonitoring(agentId, triggerData.triggers.engagement);
-      }
-
+  
+      // Schedule automation jobs based on trigger settings in a non-blocking way
+      this.scheduleAutomationJobs(agentId, triggerData.triggers)
+        .catch(error => {
+          this.logger.error(`Error scheduling automation jobs: ${error.message}`);
+          // Don't throw here, we still want to return success if the DB was updated
+        });
+  
+      this.logger.log('Triggers saved successfully');
       return { success: true };
     } catch (error) {
-      this.logger.error('Failed to save triggers:', error);
+      this.logger.error(`Failed to save triggers: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+  
+  // New method to handle scheduling in a non-blocking way
+  private async scheduleAutomationJobs(agentId: string, triggers: TriggersDto) {
+    try {
+      // Schedule content generation if enabled
+      if (triggers.newPosts?.enabled) {
+        try {
+          await this.scheduleContentGeneration(agentId, triggers.newPosts);
+          this.logger.log(`Content generation scheduled for agent ${agentId}`);
+        } catch (error) {
+          this.logger.error(`Failed to schedule content generation: ${error.message}`);
+        }
+      }
+  
+      // Schedule engagement monitoring if enabled
+      if (triggers.engagement?.enabled) {
+        try {
+          await this.scheduleEngagementMonitoring(agentId, triggers.engagement);
+          this.logger.log(`Engagement monitoring scheduled for agent ${agentId}`);
+        } catch (error) {
+          this.logger.error(`Failed to schedule engagement monitoring: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error in scheduleAutomationJobs: ${error.message}`);
       throw error;
     }
   }
 
   private async scheduleContentGeneration(agentId: string, settings: any) {
-    const jobData = {
-      agentId,
-      settings,
-      type: 'content_generation'
-    };
-
-    if (settings.frequency === 'custom') {
-      // Schedule for specific days and times
-      await this.queueService.scheduleCustom('content-generation', jobData, {
-        days: settings.customSchedule.days,
-        time: settings.customSchedule.time,
-        postsPerPeriod: settings.postsPerPeriod || 5 // Default to 5 if not specified
-      });
-    } else {
-      // Schedule based on frequency (daily/weekly)
-      await this.queueService.scheduleRecurring('content-generation', jobData, settings.frequency, settings.postsPerPeriod || 5);
+    try {
+      const jobData = {
+        agentId,
+        settings,
+        type: 'content_generation'
+      };
+  
+      // Validate the frequency and settings
+      if (settings.frequency === 'custom' && settings.customSchedule && 
+          settings.customSchedule.days && settings.customSchedule.days.length > 0 && 
+          settings.customSchedule.time) {
+        // Schedule for specific days and times
+        this.logger.log(`Scheduling custom content generation for agent ${agentId}`);
+        await this.queueService.scheduleCustom('content-generation', jobData, {
+          days: settings.customSchedule.days,
+          time: settings.customSchedule.time,
+          postsPerPeriod: settings.postsPerPeriod || 5 // Default to 5 if not specified
+        });
+      } else {
+        // Use the specified frequency or default to daily
+        const frequency = ['daily', 'weekly'].includes(settings.frequency) ? settings.frequency : 'daily';
+        this.logger.log(`Scheduling ${frequency} content generation for agent ${agentId}`);
+        await this.queueService.scheduleRecurring('content-generation', jobData, frequency, settings.postsPerPeriod || 5);
+      }
+      return true;
+    } catch (error) {
+      this.logger.error(`Error in scheduleContentGeneration: ${error.message}`);
+      throw error;
     }
   }
 

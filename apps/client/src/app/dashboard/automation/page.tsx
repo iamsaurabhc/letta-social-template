@@ -10,6 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/utils/api';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
+import { useAgentStore } from '@/stores/agentStore';
+import { toast } from '@/hooks/use-toast';
 
 export default function AutomationPage() {
   const [currentStep, setCurrentStep] = useState<'agent' | 'social' | 'trigger'>('agent');

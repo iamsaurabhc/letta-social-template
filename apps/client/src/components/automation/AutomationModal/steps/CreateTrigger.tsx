@@ -131,21 +131,53 @@ export default function CreateTrigger({ onFinish }: Props) {
         return;
       }
 
-      await api.post(`/social/agents/${agentId}/triggers`, values);
+      // Clean up the form data based on selected frequency
+      const cleanedValues = { ...values };
       
-      // Update store with completion status
-      useAgentStore.getState().updateStepCompletion('trigger', true);
+      // Remove customSchedule if frequency is not 'custom'
+      if (cleanedValues.triggers.newPosts.frequency !== 'custom') {
+        delete cleanedValues.triggers.newPosts.customSchedule;
+      }
       
-      toast({
-        title: "Automation Setup Complete",
-        description: "Your agent is now ready to automate your social media presence.",
-      });
+      // Set a timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
-      // Call the onFinish callback with the form values
-      onFinish(values);
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
+      try {
+        await api.post(`/social/agents/${agentId}/triggers`, cleanedValues, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Update store with completion status
+        useAgentStore.getState().updateStepCompletion('trigger', true);
+        
+        toast({
+          title: "Automation Setup Complete",
+          description: "Your agent is now ready to automate your social media presence.",
+        });
+        
+        // Call the onFinish callback with the form values
+        onFinish(values);
+        
+        // Redirect to dashboard
+        router.push('/dashboard');
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Request timed out but might have succeeded on the server
+          toast({
+            title: "Request Timeout",
+            description: "The request took longer than expected, but your settings may have been saved. Please check the dashboard.",
+          });
+          
+          // Still update the store and redirect
+          useAgentStore.getState().updateStepCompletion('trigger', true);
+          router.push('/dashboard');
+        } else {
+          throw error; // Re-throw for the outer catch block
+        }
+      }
     } catch (error) {
       console.error('Error saving triggers:', error);
       toast({
