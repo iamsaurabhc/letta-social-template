@@ -8,6 +8,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { AgentDetailCard } from "@/components/agents/AgentDetailCard";
 import api from '@/utils/api';
 import { useAgentStore } from '@/stores/agentStore';
+import { ScheduledPosts } from "@/components/dashboard/ScheduledPosts";
 
 export default function DashboardPage() {
   const { 
@@ -123,74 +124,77 @@ export default function DashboardPage() {
         </div>
       )}
       
-      {completedAgent && (
-        <div className="my-6">
-          <h2 className="text-xl font-bold mb-4">Your Active Agent</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Agent Detail Card Column */}
+        {completedAgent && (
+          <div>
             <AgentDetailCard 
               agent={completedAgent} 
               triggerDetails={triggerDetails}
               postingMode={postingMode}
             />
           </div>
+        )}
+
+        {/* Stats Cards Column */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{agentStats.total}</div>
+              <p className="text-xs text-muted-foreground">
+                +{agentStats.newThisMonth} from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Connected Accounts</CardTitle>
+              <Share2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{connectionStats.total}</div>
+              <p className="text-xs text-muted-foreground">
+                Across {connectionStats.platformCount} platform{connectionStats.platformCount !== 1 ? 's' : ''}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Engagement</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">24.8k</div>
+              <p className="text-xs text-muted-foreground">
+                +19% from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Automated Posts</CardTitle>
+              <Zap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">573</div>
+              <p className="text-xs text-muted-foreground">
+                Last 30 days
+              </p>
+            </CardContent>
+          </Card>
         </div>
-      )}
-      
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{agentStats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              +{agentStats.newThisMonth} from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Connected Accounts</CardTitle>
-            <Share2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{connectionStats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Across {connectionStats.platformCount} platform{connectionStats.platformCount !== 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Engagement</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24.8k</div>
-            <p className="text-xs text-muted-foreground">
-              +19% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Automated Posts</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">573</div>
-            <p className="text-xs text-muted-foreground">
-              Last 30 days
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Add more dashboard sections here */}
+      <div className="mt-6">
+        <ScheduledPosts />
+      </div>
     </div>
   );
 } 

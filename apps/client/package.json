@@ -28,6 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "common": "workspace:*",
+    "date-fns": "^4.1.0",
     "lucide-react": "^0.475.0",
     "next": "^14.0.0",
     "react": "^18.2.0",

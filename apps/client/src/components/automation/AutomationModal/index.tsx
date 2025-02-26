@@ -55,7 +55,7 @@ export function AutomationModal({
           </TabsList>
 
           <TabsContent value="agent">
-            <CreateAgent 
+            < CreateAgent 
               onNext={(agentData) => {
                 setStepData(prev => ({ ...prev, agent: agentData }));
                 setCurrentStep('social');
