@@ -8,6 +8,7 @@ import { ModifyBlockDto } from '../dto/core-memory.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { TriggersDto, TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
 import { BullQueueService } from '../../../../bull/bull-queue.service';
+import { AssistantMessage } from '@letta-ai/letta-client/api';
 
 @Injectable()
 export class AgentService extends BaseService {
@@ -357,5 +358,100 @@ export class AgentService extends BaseService {
 
     // Engagement monitoring runs more frequently
     await this.queueService.scheduleRecurring('engagement-monitoring', jobData, 'hourly');
+  }
+
+  async generatePost(params: {
+    agentId: string;
+    format: 'normal' | 'long_form';
+    scheduledFor: Date;
+  }) {
+    try {
+      // First get the agent details from Supabase
+      const { data: agent, error } = await this.supabaseClient
+        .from('user_agents')
+        .select(`
+          id,
+          letta_agent_id,
+          content_preferences,
+          industry,
+          target_audience,
+          brand_personality
+        `)
+        .eq('id', params.agentId)
+        .single();
+
+      if (error || !agent) {
+        this.logger.error(`Error fetching agent: ${error?.message}`);
+        throw new NotFoundException('Agent not found');
+      }
+
+      // Construct the prompt based on agent preferences and format
+      const prompt = `Generate a ${params.format} social media post for a ${agent.industry} business.
+        Target Audience: ${agent.target_audience?.join(', ')}
+        Brand Personality: ${agent.brand_personality?.join(', ')}
+        Content Style: ${agent.content_preferences?.style || 'professional'}
+        Format: ${params.format === 'normal' ? 'Short post under 280 characters' : 'Long-form post with detailed content'}
+        Scheduled Time: ${params.scheduledFor}
+      `;
+
+      // Start the async generation process
+      const run = await this.lettaClient.agents.messages.createAsync(agent.letta_agent_id, {
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
+
+      // Poll for completion
+      let content: string | null = null;
+      let attempts = 0;
+      const maxAttempts = 30; // 30 seconds timeout
+      
+      while (attempts < maxAttempts) {
+        const runStatus = await this.lettaClient.runs.retrieveRun(run.id!);
+        
+        if (runStatus.status === 'completed') {
+          // Get messages from the completed run
+          const messages = await this.lettaClient.runs.listRunMessages(run.id!, { order: 'asc' });
+          // Find the assistant message which contains our generated content
+          const assistantMessage = messages.find(m => m.messageType === 'assistant_message') as AssistantMessage;
+          if (assistantMessage?.content) {
+            content = assistantMessage.content as string;
+            break;
+          }
+        } else if (runStatus.status === 'failed') {
+          throw new Error(`Content generation failed: ${runStatus}`);
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between checks
+        attempts++;
+      }
+
+      if (!content) {
+        throw new Error('Content generation timed out or no content was generated');
+      }
+
+      // Clean and format the response
+      const formattedContent = this.formatGeneratedContent(content, params.format);
+
+      this.logger.log(`Generated ${params.format} post for agent ${params.agentId}`);
+      return formattedContent;
+
+    } catch (error) {
+      this.logger.error(`Failed to generate post: ${error.message}`);
+      throw error;
+    }
+  }
+
+  private formatGeneratedContent(content: string, format: 'normal' | 'long_form'): string {
+    // Remove any markdown or special formatting
+    let cleanContent = content.replace(/```/g, '').trim();
+    
+    // For normal posts, ensure it's within character limit
+    if (format === 'normal') {
+      cleanContent = cleanContent.slice(0, 280);
+    }
+    
+    return cleanContent;
   }
 } 

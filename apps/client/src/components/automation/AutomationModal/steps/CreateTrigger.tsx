@@ -40,6 +40,7 @@ import { toast } from "@/hooks/use-toast";
 import api from "@/utils/api";
 import { ChevronRight, AlertCircle } from "lucide-react";
 import { useAgentStore } from "@/stores/agentStore";
+import { calculateScheduleDates } from "@/utils/date-helpers";
 
 const triggerFormSchema = z.object({
   postingMode: z.enum(['automatic', 'manual_approval']),
@@ -131,26 +132,58 @@ export default function CreateTrigger({ onFinish }: Props) {
         return;
       }
 
+      // First get the social connection ID
+      let connectionId: string;
+      try {
+        const connectionsResponse = await api.get(`/social/agents/${agentId}/connections`);
+        if (!connectionsResponse.data?.[0]?.id) {
+          throw new Error('No social connections found');
+        }
+        connectionId = connectionsResponse.data[0].id;
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to get social connection. Please try again.",
+        });
+        return;
+      }
+
       // Clean up the form data based on selected frequency
       const cleanedValues = { ...values };
       
-      // Remove customSchedule if frequency is not 'custom'
       if (cleanedValues.triggers.newPosts.frequency !== 'custom') {
         delete cleanedValues.triggers.newPosts.customSchedule;
       }
       
-      // Set a timeout to prevent hanging requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       
       try {
+        // Save triggers
         await api.post(`/social/agents/${agentId}/triggers`, cleanedValues, {
           signal: controller.signal
         });
         
+        // If new posts are enabled, schedule initial posts
+        if (cleanedValues.triggers.newPosts.enabled) {
+          const { frequency, postsPerPeriod, format, customSchedule } = cleanedValues.triggers.newPosts;
+          
+          // Calculate scheduling dates based on frequency
+          const scheduleDates = calculateScheduleDates(frequency as 'daily' | 'weekly' | 'custom', postsPerPeriod, customSchedule as { days: string[]; time: string } | undefined);
+          
+          // Schedule posts for each calculated date
+          for (const date of scheduleDates) {
+            await api.post('/social/posts/schedule', {
+              agentId,
+              scheduledFor: date,
+              format: format || 'normal',
+              connectionId
+            });
+          }
+        }
+
         clearTimeout(timeoutId);
-        
-        // Update store with completion status
         useAgentStore.getState().updateStepCompletion('trigger', true);
         
         toast({
@@ -158,10 +191,7 @@ export default function CreateTrigger({ onFinish }: Props) {
           description: "Your agent is now ready to automate your social media presence.",
         });
         
-        // Call the onFinish callback with the form values
         onFinish(values);
-        
-        // Redirect to dashboard
         router.push('/dashboard');
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {

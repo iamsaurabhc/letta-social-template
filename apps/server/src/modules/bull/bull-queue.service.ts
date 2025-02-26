@@ -59,6 +59,50 @@ export class BullQueueService {
     await queue.add(jobData, { repeat });
   }
 
+  async schedulePost(queueName: string, data: {
+    postId: string;
+    scheduledFor: Date;
+    content: string;
+    format: 'normal' | 'long_form';
+  }) {
+    const queue = this.getQueue(queueName);
+    
+    // Schedule the post for the specific time
+    await queue.add(data, {
+      delay: new Date(data.scheduledFor).getTime() - Date.now(),
+      removeOnComplete: true
+    });
+  }
+
+  async scheduleInitialPosts(queueName: string, data: {
+    agentId: string;
+    format: 'normal' | 'long_form';
+    postsPerDay: number;
+  }) {
+    const queue = this.getQueue(queueName);
+    
+    // Schedule daily post generation at midnight
+    await queue.add('generate-daily-posts', {
+      ...data,
+      type: 'daily_generation'
+    }, {
+      repeat: {
+        cron: '0 0 * * *' // Every day at midnight
+      }
+    });
+
+    // Generate initial posts for tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    await queue.add('generate-initial-posts', {
+      ...data,
+      scheduledFor: tomorrow,
+      type: 'initial_generation'
+    });
+  }
+
   private getQueue(name: string): Queue {
     switch (name) {
       case 'content-generation':
