@@ -27,6 +27,11 @@ import { CacheModule } from './modules/cache/cache.module';
         SERVER_URL: process.env.SERVER_URL,
         TWITTER_CONSUMER_KEY: process.env.TWITTER_CONSUMER_KEY,
         TWITTER_CONSUMER_SECRET: process.env.TWITTER_CONSUMER_SECRET,
+        REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+        REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379', 10),
+        REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+        REDIS_TLS: process.env.NODE_ENV === 'production',
+        REDIS_URL: process.env.REDIS_URL,
       })],
     }),
     CacheModule,
@@ -37,11 +42,16 @@ import { CacheModule } from './modules/cache/cache.module';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST', 'localhost'),
-          port: configService.get('REDIS_PORT', 6379),
-          password: configService.get('REDIS_PASSWORD'),
-        },
+        redis: `rediss://default:${configService.get('REDIS_PASSWORD')}@${configService.get('REDIS_HOST')}:${configService.get('REDIS_PORT')}`,
+        defaultJobOptions: {
+          removeOnComplete: true,
+          removeOnFail: true,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000
+          }
+        }
       }),
       inject: [ConfigService],
     }),
