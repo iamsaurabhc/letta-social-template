@@ -15,6 +15,7 @@ import { AuthModule } from '../../auth/auth.module';
 import { ConnectionsController } from './connections/connections.controller';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { AgentsController } from './agents/agents.controller';
+import { PostService } from './posts/services/post.service';
 
 @Module({
   imports: [
@@ -39,12 +40,14 @@ import { AgentsController } from './agents/agents.controller';
     WebsiteScraperProcessor,
     TwitterAuthService,
     TwitterApiService,
-    SupabaseService
+    SupabaseService,
+    PostService
   ],
   exports: [
     TwitterModule,
     LinkedInModule,
-    UserAgentService
+    UserAgentService,
+    PostService
   ]
 })
 export class SocialModule {} 
