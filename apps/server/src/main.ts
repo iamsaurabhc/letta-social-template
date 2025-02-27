@@ -36,12 +36,21 @@ async function bootstrap() {
       await app.init();
       logger.log('NestJS application initialized');
 
-      // Initialize schedules after app is fully initialized
-      const workflowService = app.get(WorkflowService);
-      await workflowService.initializeSchedules()
-        .catch(error => {
-          logger.error('Failed to initialize schedules:', error);
-        });
+      // Only initialize schedules in production environment
+      if (process.env.NODE_ENV === 'production') {
+        const workflowService = app.get(WorkflowService);
+        await workflowService.initializeSchedules()
+          .catch(error => {
+            logger.error('Failed to initialize schedules:', error);
+          });
+      }
+
+      // Start listening if in local development
+      if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+        const port = process.env.PORT || 3001;
+        await app.listen(port);
+        logger.log(`Server listening on port ${port}`);
+      }
     }
     return app;
   } catch (error) {
@@ -71,12 +80,7 @@ export default async function handler(req, res) {
 
 // For local development
 if (require.main === module) {
-  bootstrap().then(app => {
-    const port = process.env.PORT || 3001;
-    app.listen(port, () => {
-      logger.log(`Server listening on port ${port}`);
-    });
-  }).catch(error => {
+  bootstrap().catch(error => {
     logger.error('Failed to start server:', error);
     process.exit(1);
   });
