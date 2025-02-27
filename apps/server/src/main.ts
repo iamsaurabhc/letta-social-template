@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { GlobalExceptionFilter } from './middleware/error.middleware';
+import { WorkflowService } from './modules/workflow/workflow.service';
 
 const logger = new Logger('Bootstrap');
 let app;
@@ -31,6 +32,13 @@ async function bootstrap() {
         allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
         exposedHeaders: ['Authorization'],
       });
+
+      // Initialize schedules after app is ready
+      const workflowService = app.get(WorkflowService);
+      await workflowService.initializeSchedules()
+        .catch(error => {
+          app.get(Logger).error('Failed to initialize schedules:', error);
+        });
 
       await app.init();
       logger.log('NestJS application initialized');

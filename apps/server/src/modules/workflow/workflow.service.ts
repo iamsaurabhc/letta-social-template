@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Client } from '@upstash/workflow';
 import { addMinutes } from 'date-fns';
 
@@ -8,11 +9,21 @@ export class WorkflowService {
   private readonly client: Client;
   private readonly logger = new Logger(WorkflowService.name);
   private readonly baseUrl: string;
+  private readonly supabaseClient: SupabaseClient;
 
   constructor(private configService: ConfigService) {
     this.client = new Client({
       token: this.configService.get('QSTASH_TOKEN')
     });
+
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase configuration is missing');
+    }
+
+    this.supabaseClient = new SupabaseClient(supabaseUrl, supabaseKey);
     
     this.baseUrl = process.env.NODE_ENV === 'development'
       ? 'http://localhost:3001/api'
@@ -109,5 +120,50 @@ export class WorkflowService {
     }
 
     return dates;
+  }
+
+  async initializeSchedules() {
+    try {
+      // Get all active agents with triggers from database
+      const { data: activeAgents, error } = await this.supabaseClient
+        .from('social_connections')
+        .select(`
+          agent_id,
+          platform_settings,
+          user_agents!inner (
+            id
+          )
+        `)
+        .not('platform_settings', 'is', null)
+        .eq('platform_settings->newPosts->enabled', true);
+  
+      if (error) throw error;
+  
+      // For each active agent, check and schedule if needed
+      for (const agent of activeAgents) {
+        const settings = agent.platform_settings.newPosts;
+        
+        // Check if posts are already scheduled
+        const { data: scheduledPosts, error: postsError } = await this.supabaseClient
+          .from('social_posts')
+          .select('id')
+          .eq('agent_id', agent.agent_id)
+          .eq('status', 'scheduled')
+          .gte('scheduled_for', new Date().toISOString());
+  
+        if (postsError) throw postsError;
+  
+        // If no scheduled posts exist, initialize scheduling
+        if (!scheduledPosts?.length) {
+          await this.scheduleContentGeneration(agent.agent_id, settings);
+          this.logger.log(`Initialized scheduling for agent ${agent.agent_id}`);
+        }
+      }
+  
+      this.logger.log('Successfully initialized all schedules');
+    } catch (error) {
+      this.logger.error('Failed to initialize schedules:', error);
+      throw error;
+    }
   }
 } 

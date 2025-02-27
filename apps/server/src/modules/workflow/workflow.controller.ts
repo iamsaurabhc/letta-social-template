@@ -1,12 +1,14 @@
-import { Controller, Post, Body, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Get } from '@nestjs/common';
 import { AgentService } from '../letta/features/agents/services/agent.service';
 import { PostService } from '../social/posts/services/post.service';
-import { Receiver } from "@upstash/qstash";
+import { Receiver, Client } from "@upstash/qstash";
 import { ConfigService } from '@nestjs/config';
 
 @Controller('workflow')
 export class WorkflowController {
   private readonly receiver: Receiver;
+  private readonly client: Client;
+  private readonly baseUrl: string;
   
   constructor(
     private readonly agentService: AgentService,
@@ -17,6 +19,58 @@ export class WorkflowController {
       currentSigningKey: this.configService.get('QSTASH_CURRENT_SIGNING_KEY'),
       nextSigningKey: this.configService.get('QSTASH_NEXT_SIGNING_KEY'),
     });
+
+    this.client = new Client({
+      token: this.configService.get('QSTASH_TOKEN')
+    });
+    
+    this.baseUrl = this.configService.get('SERVER_URL', 'https://social-auto-agent.vercel.app') + '/api';
+  }
+
+  @Get('health')
+  async healthCheck() {
+    try {
+      // Test QStash connectivity
+      const testWorkflow = await this.client.publishJSON({
+        url: `${this.baseUrl}/workflow/health/ping`,
+        body: { test: true },
+        retries: 3
+      });
+
+      return {
+        status: 'healthy',
+        qstash: {
+          connected: true,
+          messageId: testWorkflow.messageId
+        }
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        qstash: {
+          connected: false,
+          error: error.message
+        }
+      };
+    }
+  }
+
+  @Post('health/ping')
+  async healthPing(
+    @Body() data: any,
+    @Headers('upstash-signature') signature: string
+  ) {
+    const isValid = await this.receiver.verify({
+      body: JSON.stringify(data),
+      signature,
+      url: `${this.configService.get('SERVER_URL')}/api/workflow/health/ping`
+    });
+
+    return {
+      status: 'ok',
+      signatureValid: isValid,
+      timestamp: new Date().toISOString()
+    };
   }
 
   @Post('posts/publish')
@@ -24,7 +78,6 @@ export class WorkflowController {
     @Body() data: { postId: string; content: string; format: 'normal' | 'long_form' },
     @Headers('upstash-signature') signature: string
   ) {
-    // Verify QStash signature
     const isValid = await this.receiver.verify({
       body: JSON.stringify(data),
       signature,
@@ -35,7 +88,6 @@ export class WorkflowController {
       throw new Error('Invalid signature');
     }
 
-    // Execute the post publishing
     await this.postService.publishPost(data);
     return { success: true };
   }
@@ -45,7 +97,6 @@ export class WorkflowController {
     @Body() data: { agentId: string; settings: any; scheduledFor: Date },
     @Headers('upstash-signature') signature: string
   ) {
-    // Verify QStash signature
     const isValid = await this.receiver.verify({
       body: JSON.stringify(data),
       signature,
@@ -56,7 +107,6 @@ export class WorkflowController {
       throw new Error('Invalid signature');
     }
 
-    // Generate content using the agent service
     const content = await this.agentService.generatePost({
       agentId: data.agentId,
       format: data.settings.format || 'normal',
