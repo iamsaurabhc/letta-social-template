@@ -7,8 +7,8 @@ export class BullQueueService {
   private readonly logger = new Logger(BullQueueService.name);
 
   constructor(
-    @InjectQueue('content-generation') private contentGenerationQueue: Queue,
-    @InjectQueue('engagement-monitoring') private engagementMonitoringQueue: Queue,
+    @InjectQueue('content-generation') public contentGenerationQueue: Queue,
+    @InjectQueue('engagement-monitoring') public engagementMonitoringQueue: Queue,
   ) {}
 
   async scheduleCustom(queueName: string, data: any, schedule: { days: string[], time: string, postsPerPeriod?: number }) {
