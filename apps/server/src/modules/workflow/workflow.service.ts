@@ -86,30 +86,29 @@ export class WorkflowService {
     const postsPerPeriod = settings.postsPerPeriod || 5;
 
     if (settings.frequency === 'custom' && settings.customSchedule) {
-      // Reference existing calculateScheduleDates logic
       const { days, time } = settings.customSchedule;
-      // Implementation similar to date-helpers.ts
-      const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const [hours, minutes] = time.split(':').map(Number);
-
+      const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
+      // Only schedule the next occurrence for each selected day
       for (const day of days) {
         const dayIndex = daysOfWeek.indexOf(day);
         let date = new Date(now);
         date.setHours(hours, minutes, 0, 0);
         
-        while (date.getDay() !== dayIndex) {
+        // Find next occurrence of this day
+        while (date.getDay() !== dayIndex || date <= now) {
           date = addMinutes(date, 24 * 60); // Add one day
         }
         dates.push(date);
       }
     } else {
-      // Daily or weekly scheduling
+      // For daily/weekly, only schedule the next post
       const interval = settings.frequency === 'weekly' ? 7 : 1;
-      for (let i = 0; i < postsPerPeriod; i++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() + (i * interval));
-        dates.push(date);
-      }
+      let nextDate = new Date(now);
+      nextDate.setDate(nextDate.getDate() + interval);
+      nextDate.setHours(0, 0, 0, 0); // Schedule for midnight
+      dates.push(nextDate);
     }
 
     return dates;
