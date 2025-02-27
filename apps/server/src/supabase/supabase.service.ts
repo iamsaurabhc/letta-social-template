@@ -1,13 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseConnectionPool } from './connection-pool.service';
+import { CacheService } from '../modules/cache/cache.service';
 
 @Injectable()
 export class SupabaseService {
   private readonly supabaseClient: SupabaseClient;
   private readonly logger = new Logger(SupabaseService.name);
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private connectionPool: SupabaseConnectionPool,
+    private cacheService: CacheService
+  ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY');
 
@@ -32,8 +38,15 @@ export class SupabaseService {
   }
 
   async getAgentStatus(userId: string) {
+    const cacheKey = `agent_status:${userId}`;
+    
+    // Try cache first
+    const cached = await this.cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const client = this.connectionPool.getConnection();
     try {
-      const { data: agent, error } = await this.supabaseClient
+      const { data, error } = await client
         .from('user_agents')
         .select(`
           id,
@@ -50,33 +63,26 @@ export class SupabaseService {
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        this.logger.error('Database error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      if (!agent) {
-        return { incompleteAgent: null };
-      }
-
-      // Check if platform_settings exists and has triggers configured
-      const hasTriggers = agent.social_connections.some(conn => 
-        conn.platform_settings && 
-        (conn.platform_settings.newPosts?.enabled || 
-         conn.platform_settings.engagement?.enabled)
-      );
-
-      return {
-        incompleteAgent: {
-          id: agent.id,
-          name: agent.name,
-          hasSocialConnections: agent.social_connections.length > 0,
-          hasTriggers: hasTriggers
-        }
+      const result = {
+        incompleteAgent: data ? {
+          id: data.id,
+          name: data.name,
+          hasSocialConnections: data.social_connections.length > 0,
+          hasTriggers: data.social_connections.some(conn => 
+            conn.platform_settings?.newPosts?.enabled || 
+            conn.platform_settings?.engagement?.enabled
+          )
+        } : null
       };
-    } catch (error) {
-      this.logger.error('Failed to get agent status:', error);
-      return { incompleteAgent: null };
+
+      // Cache result
+      await this.cacheService.set(cacheKey, result, 300);
+      return result;
+
+    } finally {
+      this.connectionPool.releaseConnection(client);
     }
   }
 

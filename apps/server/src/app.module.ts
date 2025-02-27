@@ -7,6 +7,8 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { AppController } from './app.controller';
 import { BullModule } from '@nestjs/bull';
 import { WorkflowModule } from './modules/workflow/workflow.module';
+import { SupabaseConnectionPool } from './supabase/connection-pool.service';
+import { CacheModule } from './modules/cache/cache.module';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
         TWITTER_CONSUMER_SECRET: process.env.TWITTER_CONSUMER_SECRET,
       })],
     }),
+    CacheModule,
     AuthModule,
     LettaModule,
     SocialModule,

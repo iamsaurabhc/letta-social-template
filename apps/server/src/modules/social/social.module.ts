@@ -18,6 +18,7 @@ import { AgentsController } from './agents/agents.controller';
 import { PostService } from './posts/services/post.service';
 import { TwitterPostService } from './twitter/features/posts/services/post.service';
 import { BullQueueModule } from '../bull/bull.module';
+import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { BullQueueModule } from '../bull/bull.module';
     LettaModule,
     SupabaseModule,
     AuthModule,
+    CacheModule,
     BullModule.registerQueue({
       name: 'content-generation',
     }),
