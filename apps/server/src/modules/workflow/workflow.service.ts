@@ -25,7 +25,7 @@ export class WorkflowService {
 
     this.supabaseClient = new SupabaseClient(supabaseUrl, supabaseKey);
     
-    this.baseUrl = this.configService.get('SERVER_URL', 'https://social-auto-agent.vercel.app/api');
+    this.baseUrl = this.configService.get('SERVER_URL', 'https://social-auto-agent.vercel.app');
   }
 
   async schedulePost(data: {
@@ -44,7 +44,8 @@ export class WorkflowService {
         },
         flowControl: {
           key: `post-${data.postId}`,
-          parallelism: 1 // Ensure only one instance runs at a time
+          parallelism: 1,
+          ratePerSecond: 1  // Maximum one request per second for post publishing
         }
       });
 

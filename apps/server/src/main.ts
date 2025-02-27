@@ -29,19 +29,19 @@ async function bootstrap() {
         ].filter(Boolean),
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'upstash-signature'],
         exposedHeaders: ['Authorization'],
       });
 
-      // Initialize schedules after app is ready
+      await app.init();
+      logger.log('NestJS application initialized');
+
+      // Initialize schedules after app is fully initialized
       const workflowService = app.get(WorkflowService);
       await workflowService.initializeSchedules()
         .catch(error => {
           logger.error('Failed to initialize schedules:', error);
         });
-
-      await app.init();
-      logger.log('NestJS application initialized');
     }
     return app;
   } catch (error) {
