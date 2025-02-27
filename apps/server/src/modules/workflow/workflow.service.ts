@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Client } from '@upstash/workflow';
+import { Client } from '@upstash/qstash';
 import { addMinutes } from 'date-fns';
 
 @Injectable()
@@ -35,13 +35,10 @@ export class WorkflowService {
     format: 'normal' | 'long_form';
   }) {
     try {
-      const { workflowRunId } = await this.client.trigger({
+      const response = await this.client.publishJSON({
         url: `${this.baseUrl}/api/workflow/posts/publish`,
         body: data,
-        workflowRunId: `post-${data.postId}`,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        retries: 3,
         flowControl: {
           key: `post-${data.postId}`,
           parallelism: 1,
@@ -49,8 +46,8 @@ export class WorkflowService {
         }
       });
 
-      this.logger.log(`Scheduled post ${data.postId} with workflow ${workflowRunId}`);
-      return workflowRunId;
+      this.logger.log(`Scheduled post ${data.postId} with message ${response.messageId}`);
+      return response.messageId;
     } catch (error) {
       this.logger.error(`Failed to schedule post: ${error.message}`);
       throw error;
@@ -61,25 +58,22 @@ export class WorkflowService {
     try {
       const dates = this.calculateNextExecutions(settings);
       
-      const workflows = await Promise.all(dates.map(async (date) => {
-        const { workflowRunId } = await this.client.trigger({
+      const messageIds = await Promise.all(dates.map(async (date) => {
+        const response = await this.client.publishJSON({
           url: `${this.baseUrl}/api/workflow/agents/generate-content`,
           body: { agentId, settings, scheduledFor: date },
-          workflowRunId: `content-gen-${agentId}-${date.getTime()}`,
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          retries: 3,
           flowControl: {
             key: `content-gen-${agentId}`,
             parallelism: settings.postsPerPeriod || 5,
             ratePerSecond: 1
           }
         });
-        return workflowRunId;
+        return response.messageId;
       }));
 
       this.logger.log(`Scheduled content generation for agent ${agentId}`);
-      return workflows[0];
+      return messageIds[0];
     } catch (error) {
       this.logger.error(`Failed to schedule content generation: ${error.message}`);
       throw error;

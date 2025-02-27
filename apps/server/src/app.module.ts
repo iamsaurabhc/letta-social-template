@@ -6,6 +6,7 @@ import { SocialModule } from './modules/social/social.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AppController } from './app.controller';
 import { BullModule } from '@nestjs/bull';
+import { WorkflowModule } from './modules/workflow/workflow.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { BullModule } from '@nestjs/bull';
       }),
       inject: [ConfigService],
     }),
+    WorkflowModule,
   ],
   controllers: [AppController],
 })
