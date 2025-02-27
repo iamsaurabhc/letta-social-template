@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Client } from '@upstash/qstash';
 import { addMinutes } from 'date-fns';
+import { BullQueueService } from '../bull/bull-queue.service';
 
 @Injectable()
 export class WorkflowService {
@@ -10,12 +11,12 @@ export class WorkflowService {
   private readonly logger = new Logger(WorkflowService.name);
   private readonly baseUrl: string;
   private readonly supabaseClient: SupabaseClient;
+  private readonly isDevelopment: boolean;
 
-  constructor(private configService: ConfigService) {
-    this.client = new Client({
-      token: this.configService.get('QSTASH_TOKEN')
-    });
-
+  constructor(
+    private configService: ConfigService,
+    private bullQueueService: BullQueueService
+  ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseKey = this.configService.get<string>('SUPABASE_SERVICE_KEY');
 
@@ -23,9 +24,17 @@ export class WorkflowService {
       throw new Error('Supabase configuration is missing');
     }
 
-    this.supabaseClient = new SupabaseClient(supabaseUrl, supabaseKey);
+    this.supabaseClient = createClient(supabaseUrl, supabaseKey);
+    this.isDevelopment = process.env.NODE_ENV !== 'production';
     
-    this.baseUrl = this.configService.get('SERVER_URL', 'https://social-auto-agent.vercel.app');
+    // Only initialize QStash client in production
+    if (!this.isDevelopment) {
+      this.client = new Client({
+        token: this.configService.get('QSTASH_TOKEN')
+      });
+    }
+
+    this.baseUrl = this.configService.get('SERVER_URL', 'http://localhost:3001');
   }
 
   async schedulePost(data: {
@@ -56,18 +65,26 @@ export class WorkflowService {
 
   async scheduleContentGeneration(agentId: string, settings: any) {
     try {
+      if (this.isDevelopment) {
+        // Use Bull for local development
+        return await this.bullQueueService.contentGenerationQueue.add(
+          'generate-content',
+          { agentId, settings },
+          {
+            repeat: {
+              cron: settings.frequency === 'daily' ? '0 0 * * *' : '0 0 * * 1' // daily at midnight or weekly on Monday
+            }
+          }
+        );
+      }
+
+      // Use QStash for production
       const dates = this.calculateNextExecutions(settings);
-      
       const messageIds = await Promise.all(dates.map(async (date) => {
         const response = await this.client.publishJSON({
           url: `${this.baseUrl}/api/workflow/agents/generate-content`,
           body: { agentId, settings, scheduledFor: date },
-          retries: 3,
-          flowControl: {
-            key: `content-gen-${agentId}`,
-            parallelism: settings.postsPerPeriod || 5,
-            ratePerSecond: 1
-          }
+          retries: 3
         });
         return response.messageId;
       }));

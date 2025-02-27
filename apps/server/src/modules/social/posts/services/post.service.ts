@@ -1,26 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../../../../supabase/supabase.service';
 import { CreateScheduledPostDto } from '../dto/create-scheduled-post.dto';
 import { BullQueueService } from '../../../bull/bull-queue.service';
 import { AgentService } from '../../../letta/features/agents/services/agent.service';
-import { TwitterPostService } from '../../twitter/features/posts/services/post.service';
 import { TwitterAuth } from '../../twitter/interfaces/twitter.interface';
+import { TwitterPostService } from '../../twitter/features/posts/services/post.service';
 
 @Injectable()
 export class PostService {
   private readonly logger = new Logger(PostService.name);
 
   constructor(
-    private readonly supabase: SupabaseClient,
+    private readonly supabaseService: SupabaseService,
     private readonly queueService: BullQueueService,
-    private readonly lettaAgentService: AgentService,
+    private readonly agentService: AgentService,
     private readonly twitterPostService: TwitterPostService
   ) {}
 
   async getScheduledPosts(page: number = 1, limit: number = 10) {
     const offset = (page - 1) * limit;
     
-    const { data, error, count } = await this.supabase
+    const { data, error, count } = await this.supabaseService.client
       .from('social_posts')
       .select('*, social_connections(platform, username)', { count: 'exact' })
       .eq('status', 'scheduled')
@@ -40,14 +40,14 @@ export class PostService {
   async schedulePost(createPostDto: CreateScheduledPostDto) {
     try {
       // First generate content using Letta agent
-      const content = await this.lettaAgentService.generatePost({
+      const content = await this.agentService.generatePost({
         agentId: createPostDto.agentId,
         format: createPostDto.format,
         scheduledFor: createPostDto.scheduledFor
       });
 
       // Insert into social_posts table
-      const { data: post, error } = await this.supabase
+      const { data: post, error } = await this.supabaseService.client
         .from('social_posts')
         .insert({
           content: content,
@@ -84,7 +84,7 @@ export class PostService {
   }) {
     try {
       // Get post details from database
-      const { data: post, error } = await this.supabase
+      const { data: post, error } = await this.supabaseService.client
         .from('social_posts')
         .select(`
           id,
@@ -121,7 +121,7 @@ export class PostService {
         });
 
         // Update post status in database
-        await this.supabase
+        await this.supabaseService.client
           .from('social_posts')
           .update({
             status: 'posted',
@@ -139,7 +139,7 @@ export class PostService {
       this.logger.error(`Failed to publish post: ${error.message}`);
       
       // Update post status to failed
-      await this.supabase
+      await this.supabaseService.client
         .from('social_posts')
         .update({
           status: 'failed',

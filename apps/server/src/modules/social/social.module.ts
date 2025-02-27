@@ -16,6 +16,8 @@ import { ConnectionsController } from './connections/connections.controller';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { AgentsController } from './agents/agents.controller';
 import { PostService } from './posts/services/post.service';
+import { TwitterPostService } from './twitter/features/posts/services/post.service';
+import { BullQueueModule } from '../bull/bull.module';
 
 @Module({
   imports: [
@@ -26,7 +28,14 @@ import { PostService } from './posts/services/post.service';
     }),
     LettaModule,
     SupabaseModule,
-    AuthModule
+    AuthModule,
+    BullModule.registerQueue({
+      name: 'content-generation',
+    }),
+    BullModule.registerQueue({
+      name: 'engagement-monitoring',
+    }),
+    BullQueueModule,
   ],
   controllers: [
     UserAgentController,
@@ -41,13 +50,15 @@ import { PostService } from './posts/services/post.service';
     TwitterAuthService,
     TwitterApiService,
     SupabaseService,
-    PostService
+    PostService,
+    TwitterPostService
   ],
   exports: [
     TwitterModule,
     LinkedInModule,
     UserAgentService,
-    PostService
+    PostService,
+    TwitterPostService
   ]
 })
 export class SocialModule {} 
