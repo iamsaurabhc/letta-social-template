@@ -25,9 +25,7 @@ export class WorkflowService {
 
     this.supabaseClient = new SupabaseClient(supabaseUrl, supabaseKey);
     
-    this.baseUrl = process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3001/api'
-      : this.configService.get('NEXT_PUBLIC_API_URL', '/api');
+    this.baseUrl = this.configService.get('SERVER_URL', 'https://social-auto-agent.vercel.app/api');
   }
 
   async schedulePost(data: {

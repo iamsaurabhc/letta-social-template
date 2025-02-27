@@ -37,7 +37,7 @@ async function bootstrap() {
       const workflowService = app.get(WorkflowService);
       await workflowService.initializeSchedules()
         .catch(error => {
-          app.get(Logger).error('Failed to initialize schedules:', error);
+          logger.error('Failed to initialize schedules:', error);
         });
 
       await app.init();
