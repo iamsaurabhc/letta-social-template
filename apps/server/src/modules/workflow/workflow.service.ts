@@ -36,7 +36,7 @@ export class WorkflowService {
   }) {
     try {
       const { workflowRunId } = await this.client.trigger({
-        url: `${this.baseUrl}/posts/publish`,
+        url: `${this.baseUrl}/api/workflow/posts/publish`,
         body: data,
         workflowRunId: `post-${data.postId}`,
         headers: {
@@ -45,7 +45,7 @@ export class WorkflowService {
         flowControl: {
           key: `post-${data.postId}`,
           parallelism: 1,
-          ratePerSecond: 1  // Maximum one request per second for post publishing
+          ratePerSecond: 1
         }
       });
 
@@ -63,7 +63,7 @@ export class WorkflowService {
       
       const workflows = await Promise.all(dates.map(async (date) => {
         const { workflowRunId } = await this.client.trigger({
-          url: `${this.baseUrl}/agents/generate-content`,
+          url: `${this.baseUrl}/api/workflow/agents/generate-content`,
           body: { agentId, settings, scheduledFor: date },
           workflowRunId: `content-gen-${agentId}-${date.getTime()}`,
           headers: {
@@ -72,7 +72,7 @@ export class WorkflowService {
           flowControl: {
             key: `content-gen-${agentId}`,
             parallelism: settings.postsPerPeriod || 5,
-            ratePerSecond: 0.1 // Limit to one post every 10 seconds
+            ratePerSecond: 1
           }
         });
         return workflowRunId;
