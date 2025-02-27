@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CreateScheduledPostDto } from '../dto/create-scheduled-post.dto';
-import { BullQueueService } from '@/modules/bull/bull-queue.service';
-import { AgentService } from '@/modules/letta/features/agents/services/agent.service';
+import { BullQueueService } from '../../../bull/bull-queue.service';
+import { AgentService } from '../../../letta/features/agents/services/agent.service';
 import { TwitterPostService } from '../../twitter/features/posts/services/post.service';
 import { TwitterAuth } from '../../twitter/interfaces/twitter.interface';
 
