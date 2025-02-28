@@ -20,6 +20,7 @@ import { TwitterPostService } from './twitter/features/posts/services/post.servi
 import { BullQueueModule } from '../bull/bull.module';
 import { CacheModule } from '../cache/cache.module';
 import { PostController } from './posts/controllers/post.controller';
+import { PostPublisherProcessor } from './posts/processors/post-publisher.processor';
 
 @Module({
   imports: [
@@ -27,6 +28,10 @@ import { PostController } from './posts/controllers/post.controller';
     LinkedInModule,
     BullModule.registerQueue({
       name: 'website-scraping',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      }
     }),
     LettaModule,
     SupabaseModule,
@@ -34,13 +39,25 @@ import { PostController } from './posts/controllers/post.controller';
     CacheModule,
     BullModule.registerQueue({
       name: 'content-generation',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      }
     }),
     BullModule.registerQueue({
       name: 'engagement-monitoring',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      }
     }),
     BullQueueModule,
     BullModule.registerQueue({
       name: 'post-publisher',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      }
     }),
   ],
   controllers: [
@@ -58,7 +75,8 @@ import { PostController } from './posts/controllers/post.controller';
     TwitterApiService,
     SupabaseService,
     PostService,
-    TwitterPostService
+    TwitterPostService,
+    PostPublisherProcessor
   ],
   exports: [
     TwitterModule,

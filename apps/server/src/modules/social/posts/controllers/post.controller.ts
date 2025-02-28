@@ -10,10 +10,16 @@ export class PostController {
 
   @Get('scheduled')
   async getScheduledPosts(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10
+    @Query('page') pageStr: string = '1',
+    @Query('limit') limitStr: string = '10'
   ) {
-    return this.postService.getScheduledPosts(page, limit);
+    const page = parseInt(pageStr, 10);
+    const limit = parseInt(limitStr, 10);
+    
+    return this.postService.getScheduledPosts(
+      isNaN(page) ? 1 : page,
+      isNaN(limit) ? 10 : limit
+    );
   }
 
   @Post('schedule')

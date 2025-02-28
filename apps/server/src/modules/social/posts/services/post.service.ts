@@ -18,61 +18,107 @@ export class PostService {
   ) {}
 
   async getScheduledPosts(page: number = 1, limit: number = 10) {
-    const offset = (page - 1) * limit;
-    
-    const { data, error, count } = await this.supabaseService.client
-      .from('social_posts')
-      .select('*, social_connections(platform, username)', { count: 'exact' })
-      .eq('status', 'scheduled')
-      .order('scheduled_for', { ascending: true })
-      .range(offset, offset + limit - 1);
+    try {
+      const offset = (page - 1) * limit;
+      
+      const { data, error, count } = await this.supabaseService.client
+        .from('social_posts')
+        .select(`
+          *,
+          social_connections (
+            platform,
+            username
+          ),
+          user_agents (
+            name
+          )
+        `, { count: 'exact' })
+        .eq('status', 'scheduled')
+        .order('scheduled_for', { ascending: true })
+        .range(offset, offset + limit - 1);
 
-    if (error) throw error;
+      if (error) {
+        this.logger.error('Error fetching scheduled posts:', error);
+        throw error;
+      }
 
-    return {
-      posts: data,
-      total: count,
-      page,
-      limit
-    };
+      this.logger.debug('Fetched scheduled posts:', { data, count });
+
+      return {
+        posts: data || [],
+        total: count || 0,
+        page,
+        limit
+      };
+    } catch (error) {
+      this.logger.error('Failed to get scheduled posts:', error);
+      throw error;
+    }
   }
 
   async schedulePost(createPostDto: CreateScheduledPostDto) {
     try {
-      // First generate content using Letta agent
-      const content = await this.agentService.generatePost({
-        agentId: createPostDto.agentId,
-        format: createPostDto.format,
-        scheduledFor: createPostDto.scheduledFor
-      });
+      this.logger.debug('Scheduling post with DTO:', createPostDto);
 
-      // Insert into social_posts table
+      // Validate required fields
+      if (!createPostDto.agentId || !createPostDto.connectionId) {
+        this.logger.error('Missing required fields:', { dto: createPostDto });
+        throw new Error('Missing required fields: agentId or connectionId');
+      }
+
+      const scheduledForDate = new Date(createPostDto.scheduledFor);
+
+      // Get platform and user_id from connection
+      const { data: connection, error: connectionError } = await this.supabaseService.client
+        .from('social_connections')
+        .select('platform, user_id')
+        .eq('id', createPostDto.connectionId)
+        .single();
+
+      if (connectionError || !connection) {
+        throw new Error('Failed to fetch connection details');
+      }
+
+      // Insert into social_posts table with all required fields
       const { data: post, error } = await this.supabaseService.client
         .from('social_posts')
         .insert({
-          content: content,
+          content: createPostDto.content,
           scheduled_for: createPostDto.scheduledFor,
           agent_id: createPostDto.agentId,
-          social_connection_id: createPostDto.connectionId,
+          connection_id: createPostDto.connectionId,
+          user_id: connection.user_id,
+          platform: connection.platform,
           status: 'scheduled',
-          format: createPostDto.format
+          metadata: {
+            format: createPostDto.format
+          }
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        this.logger.error('Database insertion error:', { error, dto: createPostDto });
+        throw error;
+      }
+
+      this.logger.debug('Post inserted successfully:', { post });
 
       // Schedule the post in the queue
       await this.queueService.schedulePost('post-publisher', {
         postId: post.id,
-        scheduledFor: createPostDto.scheduledFor,
-        content: content,
+        scheduledFor: scheduledForDate,
+        content: createPostDto.content,
         format: createPostDto.format
       });
 
       return post;
     } catch (error) {
-      this.logger.error('Error scheduling post:', error);
+      this.logger.error('Error scheduling post:', {
+        error: error.message,
+        stack: error.stack,
+        dto: createPostDto
+      });
       throw error;
     }
   }

@@ -3,9 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Zap, MessageCircle, Calendar, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AgentDetailsModal } from "./AgentDetailsModal";
-import { AgentData } from "@/components/automation/AutomationModal/types";
+import { AgentData } from "@/types/agent";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -22,8 +22,33 @@ interface AgentDetailCardProps {
 export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDetailCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGeneratingPost, setIsGeneratingPost] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<{
+    normal: string;
+    longForm: string;
+  } | null>(null);
   const [showGeneratedContent, setShowGeneratedContent] = useState(false);
+
+  // Fetch connection ID when component mounts
+  useEffect(() => {
+    const fetchConnectionId = async () => {
+      try {
+        const response = await api.get(`/social/agents/${agent.id}/connections`);
+        if (response.data?.[0]?.id) {
+          setConnectionId(response.data[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch connection ID:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch social connection. Some features may be limited.",
+        });
+      }
+    };
+
+    fetchConnectionId();
+  }, [agent.id]);
 
   const formatTriggerSummary = () => {
     if (!triggerDetails) return "No automation configured";
@@ -99,10 +124,14 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
     e.stopPropagation();
     try {
       setIsGeneratingPost(true);
+      
+      // Determine format based on trigger details or default to 'both'
+      const format = triggerDetails?.newPosts?.format || 'both';
+      
       const response = await api.post<GenerationResponse>(`/workflow/agents/generate-content`, {
         agentId: agent.id,
         settings: {
-          format: triggerDetails?.newPosts?.format || 'normal'
+          format
         },
         scheduledFor: new Date().toISOString()
       });
@@ -111,11 +140,19 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
         throw new Error(response.data?.error?.message || 'Failed to generate content');
       }
 
-      if (typeof response.data.content === 'string') {
+      // Update state with both normal and long-form content
+      if (typeof response.data.content === 'object' && 
+          response.data.content.normal && 
+          response.data.content.longForm) {
         setGeneratedContent(response.data.content);
+      } else if (typeof response.data.content === 'string') {
+        // Handle single format response
+        setGeneratedContent({
+          normal: response.data.content,
+          longForm: response.data.content
+        });
       } else {
-        // Handle 'both' format - for now just show the normal post
-        setGeneratedContent(response.data.content.normal);
+        throw new Error('Invalid content format received from server');
       }
       
       setShowGeneratedContent(true);
@@ -219,11 +256,15 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
         postingMode={postingMode}
       />
       
-      <GeneratedContentModal
-        isOpen={showGeneratedContent}
-        onClose={handleCloseGeneratedContent}
-        content={generatedContent || ''}
-      />
+      {showGeneratedContent && generatedContent && connectionId && (
+        <GeneratedContentModal
+          isOpen={showGeneratedContent}
+          onClose={handleCloseGeneratedContent}
+          content={generatedContent}
+          agentId={agent.id}
+          connectionId={connectionId}
+        />
+      )}
     </>
   );
 } 
