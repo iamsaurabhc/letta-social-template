@@ -4,6 +4,8 @@ import { PostService } from '../social/posts/services/post.service';
 import { Receiver, Client } from "@upstash/qstash";
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { isValid } from 'date-fns';
+import { GenerateContentRequest } from './types';
 
 @Controller('workflow')
 export class WorkflowController {
@@ -96,51 +98,67 @@ export class WorkflowController {
   }
 
   @Post('agents/generate-content')
-  async generateContent(
-    @Body() data: { agentId: string; settings: any; scheduledFor: Date },
-    @Headers('upstash-signature') signature: string
-  ) {
+  async generateContent(@Body() data: GenerateContentRequest) {
     try {
-      this.logger.log(`Received content generation request for agent ${data.agentId}`);
-
-      // Skip signature verification in development
-      if (process.env.NODE_ENV !== 'production') {
-        this.logger.log('Development mode: Skipping signature verification');
-        const content = await this.agentService.generatePost({
-          agentId: data.agentId,
-          format: data.settings.format || 'normal',
-          scheduledFor: new Date(data.scheduledFor)
-        });
-
-        return { success: true, content };
+      // Validate format
+      if (!['normal', 'long_form', 'both'].includes(data.settings.format)) {
+        throw new Error('Invalid format specified');
       }
 
-      this.logger.log('Production mode: Verifying signature');
-      const isValid = await this.receiver.verify({
-        body: JSON.stringify(data),
-        signature,
-        url: `${this.configService.get('SERVER_URL')}/api/workflow/agents/generate-content`
-      });
-
-      if (!isValid) {
-        this.logger.error('Invalid signature received');
-        throw new Error('Invalid signature');
+      // Validate scheduledFor date
+      if (!isValid(new Date(data.scheduledFor))) {
+        throw new Error('Invalid scheduled date');
       }
 
+      // If format is 'both', generate two posts
+      if (data.settings.format === 'both') {
+        const [normalPost, longFormPost] = await Promise.all([
+          this.agentService.generatePost({
+            agentId: data.agentId,
+            format: 'normal',
+            scheduledFor: new Date(data.scheduledFor)
+          }),
+          this.agentService.generatePost({
+            agentId: data.agentId,
+            format: 'long_form',
+            scheduledFor: new Date(data.scheduledFor)
+          })
+        ]);
+
+        return {
+          success: true,
+          content: {
+            normal: normalPost,
+            longForm: longFormPost
+          }
+        };
+      }
+
+      // Single format generation
       const content = await this.agentService.generatePost({
         agentId: data.agentId,
-        format: data.settings.format || 'normal',
+        format: data.settings.format,
         scheduledFor: new Date(data.scheduledFor)
       });
 
-      return { success: true, content };
+      return {
+        success: true,
+        content
+      };
     } catch (error) {
       this.logger.error('Content generation failed:', {
         error: error.message,
         stack: error.stack,
         data: data
       });
-      throw error;
+
+      return {
+        success: false,
+        error: {
+          message: error.message,
+          code: 'GENERATION_FAILED'
+        }
+      };
     }
   }
 } 

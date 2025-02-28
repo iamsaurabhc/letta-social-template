@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import api from "@/utils/api";
 import { GeneratedContentModal } from "./GeneratedContentModal";
+import { GenerationResponse } from "@/types/api";
 
 interface AgentDetailCardProps {
   agent: AgentData;
@@ -95,10 +96,10 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
   };
 
   const handleGeneratePost = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click event
+    e.stopPropagation();
     try {
       setIsGeneratingPost(true);
-      const response = await api.post(`/workflow/agents/generate-content`, {
+      const response = await api.post<GenerationResponse>(`/workflow/agents/generate-content`, {
         agentId: agent.id,
         settings: {
           format: triggerDetails?.newPosts?.format || 'normal'
@@ -106,16 +107,31 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
         scheduledFor: new Date().toISOString()
       });
 
-      if (response.data?.content) {
-        setGeneratedContent(response.data.content);
-        setShowGeneratedContent(true);
+      if (!response.data?.success) {
+        throw new Error(response.data?.error?.message || 'Failed to generate content');
       }
+
+      if (typeof response.data.content === 'string') {
+        setGeneratedContent(response.data.content);
+      } else {
+        // Handle 'both' format - for now just show the normal post
+        setGeneratedContent(response.data.content.normal);
+      }
+      
+      setShowGeneratedContent(true);
     } catch (error) {
       console.error('Failed to generate post:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message.includes('timeout')
+          ? "Generation is taking longer than expected. Please try again."
+          : error.message
+        : "Failed to generate post. Please try again.";
+
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to generate post. Please try again.",
+        description: errorMessage,
       });
     } finally {
       setIsGeneratingPost(false);

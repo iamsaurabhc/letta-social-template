@@ -368,6 +368,38 @@ export class AgentService extends BaseService {
     await this.queueService.scheduleRecurring('engagement-monitoring', jobData, 'hourly');
   }
 
+  private sanitizePromptData(data: any): string {
+    this.logger.debug('Sanitizing data:', {
+      type: typeof data,
+      isArray: Array.isArray(data),
+      rawValue: data
+    });
+
+    if (!data) {
+      this.logger.debug('Empty data, returning empty string');
+      return '';
+    }
+
+    if (Array.isArray(data)) {
+      const sanitizedArray = data.map(item => this.sanitizePromptData(item));
+      this.logger.debug('Sanitized array:', sanitizedArray);
+      return sanitizedArray.join(', ');
+    }
+
+    const stringified = String(data);
+    const sanitized = stringified.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+
+    if (stringified !== sanitized) {
+      this.logger.debug('Found and removed control characters:', {
+        before: stringified,
+        after: sanitized,
+        removedChars: stringified.split('').filter(char => sanitized.indexOf(char) === -1)
+      });
+    }
+
+    return sanitized;
+  }
+
   async generatePost(params: {
     agentId: string;
     format: 'normal' | 'long_form';
@@ -376,7 +408,7 @@ export class AgentService extends BaseService {
     try {
       this.logger.log(`Starting post generation for agent ${params.agentId}`);
       
-      // First get the agent details from Supabase
+      // Log raw agent data before sanitization
       const { data: agent, error } = await this.supabaseClient
         .from('user_agents')
         .select(`
@@ -390,23 +422,62 @@ export class AgentService extends BaseService {
         .eq('id', params.agentId)
         .single();
 
+      this.logger.debug('Raw agent data:', JSON.stringify(agent, null, 2));
+
       if (error || !agent) {
         this.logger.error(`Error fetching agent: ${error?.message}`);
         throw new NotFoundException('Agent not found');
       }
 
-      this.logger.log(`Found agent ${agent.id} with Letta ID ${agent.letta_agent_id}`);
+      // Log each field before sanitization
+      this.logger.debug('Pre-sanitization values:', {
+        industry: agent.industry,
+        targetAudience: agent.target_audience,
+        brandPersonality: agent.brand_personality,
+        contentPreferences: agent.content_preferences,
+        format: params.format
+      });
 
-      // Updated prompt with better structure
-      const prompt = `As a social media content creator for a ${agent.industry} business, create a ${params.format} post.
+      // Sanitize all input data
+      const industry = this.sanitizePromptData(agent.industry);
+      const targetAudience = this.sanitizePromptData(agent.target_audience);
+      const brandPersonality = this.sanitizePromptData(agent.brand_personality);
+      const style = this.sanitizePromptData(agent.content_preferences?.style) || 'professional';
+      const format = this.sanitizePromptData(params.format);
 
-Target Audience: ${agent.target_audience?.join(', ')}
-Brand Personality: ${agent.brand_personality?.join(', ')}
-Style: ${agent.content_preferences?.style || 'professional'}
-Format Requirements: ${params.format === 'normal' ? 'Create a concise post under 280 characters' : 'Create a detailed long-form post'}
-Post Time: ${params.scheduledFor}
+      // Log sanitized values
+      this.logger.debug('Post-sanitization values:', {
+        industry,
+        targetAudience,
+        brandPersonality,
+        style,
+        format
+      });
 
-Generate a single, engaging post that resonates with our audience while maintaining our brand voice.`;
+      // Build prompt parts separately for debugging
+      const promptParts = [
+        `As a social media content creator for a ${industry} business, create a ${format} post.`,
+        '',
+        `Target Audience: ${targetAudience}`,
+        `Brand Personality: ${brandPersonality}`,
+        `Style: ${style}`,
+        `Format Requirements: ${format === 'normal' ? 'Create a concise post under 280 characters' : 'Create a detailed long-form post'}`,
+        `Post Time: ${params.scheduledFor.toISOString()}`,
+        '',
+        'Generate a single, engaging post that resonates with our audience while maintaining our brand voice.'
+      ];
+
+      // Log each prompt part separately
+      this.logger.debug('Prompt parts:', promptParts);
+
+      const prompt = promptParts.join('\n');
+
+      // Log final prompt
+      this.logger.debug('Final prompt:', {
+        promptLength: prompt.length,
+        promptPreview: prompt.substring(0, 100) + '...',
+        promptBytes: Buffer.from(prompt).length
+      });
 
       this.logger.log('Starting async generation with Letta');
       const run = await this.lettaClient.agents.messages.createAsync(agent.letta_agent_id, {
@@ -414,13 +485,6 @@ Generate a single, engaging post that resonates with our audience while maintain
           role: 'user',
           content: prompt
         }],
-        model: 'together/deepseek-coder-33b-instruct',
-        modelConfig: {
-          temperature: 0.7,
-          maxTokens: params.format === 'normal' ? 300 : 2000,
-          contextWindow: 4096,
-          modelEndpointType: 'together'
-        }
       });
 
       this.logger.log(`Created Letta run with ID: ${run.id}`);
@@ -433,13 +497,15 @@ Generate a single, engaging post that resonates with our audience while maintain
         this.logger.debug(`Run status check ${attempts + 1}/${this.MAX_ATTEMPTS}: ${runStatus.status}`);
         
         if (runStatus.status === 'completed') {
-          const messages = await this.lettaClient.runs.listRunMessages(run.id!, { order: 'asc' });
-          this.logger.log(`Retrieved ${messages.length} messages from completed run`);
-          
-          const assistantMessage = messages.find(m => m.messageType === 'assistant_message') as AssistantMessage;
-          if (assistantMessage?.content) {
-            content = assistantMessage.content as string;
+          try {
+            content = await this.processRunMessages(run.id!);
+            if (!content) {
+              throw new Error('No content generated');
+            }
             break;
+          } catch (error) {
+            this.logger.error('Error processing run messages:', error);
+            throw error;
           }
         } else if (runStatus.status === 'failed') {
           this.logger.error('Run failed with status:', JSON.stringify(runStatus, null, 2));
@@ -471,14 +537,108 @@ Generate a single, engaging post that resonates with our audience while maintain
   }
 
   private formatGeneratedContent(content: string, format: 'normal' | 'long_form'): string {
-    // Remove any markdown or special formatting
-    let cleanContent = content.replace(/```/g, '').trim();
-    
-    // For normal posts, ensure it's within character limit
-    if (format === 'normal') {
-      cleanContent = cleanContent.slice(0, 280);
+    try {
+      // Basic cleaning
+      let cleanContent = content.trim();
+      
+      if (format === 'normal') {
+        // For normal posts: remove newlines and truncate
+        return cleanContent
+          .replace(/\n/g, ' ')
+          .replace(/\s+/g, ' ')
+          .slice(0, 280);
+      }
+      
+      // For long-form: preserve structure but ensure clean paragraphs
+      return cleanContent
+        .split(/\n\s*\n/)
+        .map(para => para.trim())
+        .filter(para => para.length > 0)
+        .join('\n\n');
+        
+    } catch (error) {
+      this.logger.error('Error formatting content:', {
+        error: error.message,
+        contentLength: content?.length,
+        format
+      });
+      throw new Error('Failed to format generated content');
     }
-    
-    return cleanContent;
+  }
+
+  private async processRunMessages(runId: string): Promise<string> {
+    try {
+      this.logger.log('Processing run messages for runId:', runId);
+      
+      let messages;
+      try {
+        messages = await this.lettaClient.runs.listRunMessages(runId, { order: 'asc' });
+      } catch (apiError) {
+        // If it's a JSON parsing error, try to extract the content directly
+        if (apiError.statusCode === 400 && apiError.response?.detail?.includes('Invalid control character')) {
+          const rawResponse = apiError.body;
+          
+          // Try to extract content using a more robust regex pattern
+          const contentPattern = /\"content\":\s*\"((?:\\.|[^"\\])*)\"/;
+          const match = rawResponse.match(contentPattern);
+          
+          if (match && match[1]) {
+            // Properly unescape the content
+            const content = match[1]
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\');
+              
+            return this.sanitizePromptData(content);
+          }
+          
+          // If direct content extraction fails, try function arguments
+          const argsPattern = /\"arguments\":\s*\"((?:\\.|[^"\\])*)\"/;
+          const argsMatch = rawResponse.match(argsPattern);
+          
+          if (argsMatch && argsMatch[1]) {
+            const args = argsMatch[1]
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\');
+              
+            try {
+              const parsed = JSON.parse(args);
+              if (parsed.message) {
+                return this.sanitizePromptData(parsed.message);
+              }
+            } catch {
+              return this.sanitizePromptData(args);
+            }
+          }
+        }
+        
+        this.logger.error('Failed to process API response:', {
+          error: apiError.message,
+          statusCode: apiError.statusCode,
+          response: apiError.body
+        });
+        throw new Error(`Failed to fetch run messages: ${apiError.message}`);
+      }
+
+      const assistantMessage = messages.find(m => m.messageType === 'assistant_message') as AssistantMessage;
+      if (!assistantMessage?.content) {
+        throw new Error('No valid content found in assistant message');
+      }
+
+      const content = typeof assistantMessage.content === 'string' 
+        ? assistantMessage.content 
+        : JSON.stringify(assistantMessage.content);
+
+      return this.sanitizePromptData(content);
+
+    } catch (error) {
+      this.logger.error('Error processing run messages:', {
+        error: error.message,
+        runId,
+        errorDetails: error
+      });
+      throw new Error('Failed to process generated content');
+    }
   }
 } 
