@@ -13,6 +13,7 @@ import { AssistantMessage } from '@letta-ai/letta-client/api';
 @Injectable()
 export class AgentService extends BaseService {
   private readonly supabaseClient: SupabaseClient;
+  private readonly MAX_ATTEMPTS = 30; // 30 attempts with 1 second delay = 30 seconds timeout
 
   constructor(
     configService: ConfigService,
@@ -48,8 +49,15 @@ export class AgentService extends BaseService {
         description: agentData.description,
         system: agentData.systemPrompt,
         agentType: agentData.agentType,
-        model: agentData.model || 'openai/gpt-4',
-        embedding: agentData.embedding || 'openai/text-embedding-ada-002'
+        model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free',
+        embedding: 'hugging-face/letta-free',
+        llmConfig: {
+          temperature: 0.7,
+          maxTokens: 2000,
+          contextWindow: 4096,
+          modelEndpointType: 'together',
+          model: 'deepseek-coder-33b-instruct'
+        }
       });
       return agent;
     } catch (error) {
@@ -366,6 +374,8 @@ export class AgentService extends BaseService {
     scheduledFor: Date;
   }) {
     try {
+      this.logger.log(`Starting post generation for agent ${params.agentId}`);
+      
       // First get the agent details from Supabase
       const { data: agent, error } = await this.supabaseClient
         .from('user_agents')
@@ -385,45 +395,58 @@ export class AgentService extends BaseService {
         throw new NotFoundException('Agent not found');
       }
 
-      // Construct the prompt based on agent preferences and format
-      const prompt = `Generate a ${params.format} social media post for a ${agent.industry} business.
-        Target Audience: ${agent.target_audience?.join(', ')}
-        Brand Personality: ${agent.brand_personality?.join(', ')}
-        Content Style: ${agent.content_preferences?.style || 'professional'}
-        Format: ${params.format === 'normal' ? 'Short post under 280 characters' : 'Long-form post with detailed content'}
-        Scheduled Time: ${params.scheduledFor}
-      `;
+      this.logger.log(`Found agent ${agent.id} with Letta ID ${agent.letta_agent_id}`);
 
-      // Start the async generation process
+      // Updated prompt with better structure
+      const prompt = `As a social media content creator for a ${agent.industry} business, create a ${params.format} post.
+
+Target Audience: ${agent.target_audience?.join(', ')}
+Brand Personality: ${agent.brand_personality?.join(', ')}
+Style: ${agent.content_preferences?.style || 'professional'}
+Format Requirements: ${params.format === 'normal' ? 'Create a concise post under 280 characters' : 'Create a detailed long-form post'}
+Post Time: ${params.scheduledFor}
+
+Generate a single, engaging post that resonates with our audience while maintaining our brand voice.`;
+
+      this.logger.log('Starting async generation with Letta');
       const run = await this.lettaClient.agents.messages.createAsync(agent.letta_agent_id, {
         messages: [{
           role: 'user',
           content: prompt
-        }]
+        }],
+        model: 'together/deepseek-coder-33b-instruct',
+        modelConfig: {
+          temperature: 0.7,
+          maxTokens: params.format === 'normal' ? 300 : 2000,
+          contextWindow: 4096,
+          modelEndpointType: 'together'
+        }
       });
 
-      // Poll for completion
+      this.logger.log(`Created Letta run with ID: ${run.id}`);
+
       let content: string | null = null;
       let attempts = 0;
-      const maxAttempts = 30; // 30 seconds timeout
       
-      while (attempts < maxAttempts) {
+      while (attempts < this.MAX_ATTEMPTS) {
         const runStatus = await this.lettaClient.runs.retrieveRun(run.id!);
+        this.logger.debug(`Run status check ${attempts + 1}/${this.MAX_ATTEMPTS}: ${runStatus.status}`);
         
         if (runStatus.status === 'completed') {
-          // Get messages from the completed run
           const messages = await this.lettaClient.runs.listRunMessages(run.id!, { order: 'asc' });
-          // Find the assistant message which contains our generated content
+          this.logger.log(`Retrieved ${messages.length} messages from completed run`);
+          
           const assistantMessage = messages.find(m => m.messageType === 'assistant_message') as AssistantMessage;
           if (assistantMessage?.content) {
             content = assistantMessage.content as string;
             break;
           }
         } else if (runStatus.status === 'failed') {
-          throw new Error(`Content generation failed: ${runStatus}`);
+          this.logger.error('Run failed with status:', JSON.stringify(runStatus, null, 2));
+          throw new Error(`Content generation failed with status: ${runStatus.status}`);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between checks
+        await new Promise(resolve => setTimeout(resolve, 1000));
         attempts++;
       }
 
@@ -431,14 +454,18 @@ export class AgentService extends BaseService {
         throw new Error('Content generation timed out or no content was generated');
       }
 
-      // Clean and format the response
       const formattedContent = this.formatGeneratedContent(content, params.format);
-
-      this.logger.log(`Generated ${params.format} post for agent ${params.agentId}`);
+      this.logger.log(`Successfully generated ${params.format} post for agent ${params.agentId}`);
+      
       return formattedContent;
 
     } catch (error) {
-      this.logger.error(`Failed to generate post: ${error.message}`);
+      this.logger.error('Failed to generate post:', {
+        error: error.message,
+        stack: error.stack,
+        agentId: params.agentId,
+        format: params.format
+      });
       throw error;
     }
   }

@@ -3,6 +3,7 @@ import { Calendar, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import api from "@/utils/api";
+import { toast } from "@/hooks/use-toast";
 
 interface ScheduledPost {
   id: string;
@@ -23,10 +24,16 @@ export function ScheduledPosts() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
+        setIsLoading(true);
         const response = await api.get('/social/posts/scheduled');
         setPosts(response.data.posts);
       } catch (error) {
         console.error('Failed to fetch scheduled posts:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch scheduled posts. Please try again later.",
+        });
       } finally {
         setIsLoading(false);
       }

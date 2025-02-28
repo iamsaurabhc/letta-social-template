@@ -3,12 +3,14 @@ import { AgentService } from '../letta/features/agents/services/agent.service';
 import { PostService } from '../social/posts/services/post.service';
 import { Receiver, Client } from "@upstash/qstash";
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 
 @Controller('workflow')
 export class WorkflowController {
   private readonly receiver: Receiver;
   private readonly client: Client;
   private readonly baseUrl: string;
+  private readonly logger: Logger;
   
   constructor(
     private readonly agentService: AgentService,
@@ -25,6 +27,7 @@ export class WorkflowController {
     });
     
     this.baseUrl = this.configService.get('SERVER_URL', 'https://social-auto-agent.vercel.app') + '/api';
+    this.logger = new Logger(WorkflowController.name);
   }
 
   @Get('health')
@@ -97,22 +100,47 @@ export class WorkflowController {
     @Body() data: { agentId: string; settings: any; scheduledFor: Date },
     @Headers('upstash-signature') signature: string
   ) {
-    const isValid = await this.receiver.verify({
-      body: JSON.stringify(data),
-      signature,
-      url: `${this.configService.get('SERVER_URL')}/api/workflow/agents/generate-content`
-    });
+    try {
+      this.logger.log(`Received content generation request for agent ${data.agentId}`);
 
-    if (!isValid) {
-      throw new Error('Invalid signature');
+      // Skip signature verification in development
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log('Development mode: Skipping signature verification');
+        const content = await this.agentService.generatePost({
+          agentId: data.agentId,
+          format: data.settings.format || 'normal',
+          scheduledFor: new Date(data.scheduledFor)
+        });
+
+        return { success: true, content };
+      }
+
+      this.logger.log('Production mode: Verifying signature');
+      const isValid = await this.receiver.verify({
+        body: JSON.stringify(data),
+        signature,
+        url: `${this.configService.get('SERVER_URL')}/api/workflow/agents/generate-content`
+      });
+
+      if (!isValid) {
+        this.logger.error('Invalid signature received');
+        throw new Error('Invalid signature');
+      }
+
+      const content = await this.agentService.generatePost({
+        agentId: data.agentId,
+        format: data.settings.format || 'normal',
+        scheduledFor: new Date(data.scheduledFor)
+      });
+
+      return { success: true, content };
+    } catch (error) {
+      this.logger.error('Content generation failed:', {
+        error: error.message,
+        stack: error.stack,
+        data: data
+      });
+      throw error;
     }
-
-    const content = await this.agentService.generatePost({
-      agentId: data.agentId,
-      format: data.settings.format || 'normal',
-      scheduledFor: new Date(data.scheduledFor)
-    });
-
-    return { success: true, content };
   }
 } 

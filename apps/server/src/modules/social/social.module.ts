@@ -19,6 +19,7 @@ import { PostService } from './posts/services/post.service';
 import { TwitterPostService } from './twitter/features/posts/services/post.service';
 import { BullQueueModule } from '../bull/bull.module';
 import { CacheModule } from '../cache/cache.module';
+import { PostController } from './posts/controllers/post.controller';
 
 @Module({
   imports: [
@@ -38,12 +39,16 @@ import { CacheModule } from '../cache/cache.module';
       name: 'engagement-monitoring',
     }),
     BullQueueModule,
+    BullModule.registerQueue({
+      name: 'post-publisher',
+    }),
   ],
   controllers: [
     UserAgentController,
     TwitterAuthController,
     ConnectionsController,
-    AgentsController
+    AgentsController,
+    PostController
   ],
   providers: [
     UserAgentService,

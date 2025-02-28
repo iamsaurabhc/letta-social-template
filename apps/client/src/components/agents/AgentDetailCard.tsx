@@ -2,11 +2,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Zap, MessageCircle, Calendar } from "lucide-react";
+import { Zap, MessageCircle, Calendar, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { AgentDetailsModal } from "./AgentDetailsModal";
 import { AgentData } from "@/components/automation/AutomationModal/types";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import api from "@/utils/api";
+import { GeneratedContentModal } from "./GeneratedContentModal";
 
 interface AgentDetailCardProps {
   agent: AgentData;
@@ -16,6 +20,9 @@ interface AgentDetailCardProps {
 
 export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDetailCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGeneratingPost, setIsGeneratingPost] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [showGeneratedContent, setShowGeneratedContent] = useState(false);
 
   const formatTriggerSummary = () => {
     if (!triggerDetails) return "No automation configured";
@@ -87,6 +94,39 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
     );
   };
 
+  const handleGeneratePost = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click event
+    try {
+      setIsGeneratingPost(true);
+      const response = await api.post(`/workflow/agents/generate-content`, {
+        agentId: agent.id,
+        settings: {
+          format: triggerDetails?.newPosts?.format || 'normal'
+        },
+        scheduledFor: new Date().toISOString()
+      });
+
+      if (response.data?.content) {
+        setGeneratedContent(response.data.content);
+        setShowGeneratedContent(true);
+      }
+    } catch (error) {
+      console.error('Failed to generate post:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to generate post. Please try again.",
+      });
+    } finally {
+      setIsGeneratingPost(false);
+    }
+  };
+
+  const handleCloseGeneratedContent = () => {
+    setShowGeneratedContent(false);
+    setGeneratedContent(null);
+  };
+
   return (
     <>
       <Card 
@@ -113,6 +153,21 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="mb-4">
+              <Button 
+                onClick={handleGeneratePost}
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                disabled={isGeneratingPost}
+              >
+                {isGeneratingPost ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {isGeneratingPost ? "Generating..." : "Generate New Post"}
+              </Button>
+            </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Zap className="h-4 w-4 text-amber-500" />
@@ -146,6 +201,12 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
         onClose={() => setIsModalOpen(false)}
         triggerDetails={triggerDetails}
         postingMode={postingMode}
+      />
+      
+      <GeneratedContentModal
+        isOpen={showGeneratedContent}
+        onClose={handleCloseGeneratedContent}
+        content={generatedContent || ''}
       />
     </>
   );
