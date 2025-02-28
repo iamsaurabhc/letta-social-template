@@ -9,6 +9,8 @@ import { AgentDetailCard } from "@/components/agents/AgentDetailCard";
 import api from '@/utils/api';
 import { useAgentStore } from '@/stores/agentStore';
 import { ScheduledPosts } from "@/components/dashboard/ScheduledPosts";
+import { AgentScheduledPosts } from "./AgentScheduledPosts";
+import { AgentData } from "@/types/agent";
 
 export default function DashboardPage() {
   const { 
@@ -18,7 +20,7 @@ export default function DashboardPage() {
     isLoading 
   } = useAgentStore();
   
-  const [completedAgent, setCompletedAgent] = useState(null);
+  const [completedAgent, setCompletedAgent] = useState<AgentData | null>(null);
   const [triggerDetails, setTriggerDetails] = useState(null);
   const [postingMode, setPostingMode] = useState<'automatic' | 'manual_approval'>('manual_approval');
 
@@ -124,76 +126,86 @@ export default function DashboardPage() {
         </div>
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Agent Detail Card Column */}
-        {completedAgent && (
-          <div>
-            <AgentDetailCard 
-              agent={completedAgent} 
-              triggerDetails={triggerDetails}
-              postingMode={postingMode}
-            />
+      {/* Agent Detail and Stats Section */}
+      <div className="grid grid-cols-1 gap-4">
+        {/* Agent Detail Card Row */}
+        {completedAgent && completedAgent.id && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {/* Agent Detail Card - Full Width */}
+            <div className="lg:col-span-3">
+              <AgentDetailCard 
+                agent={completedAgent} 
+                triggerDetails={triggerDetails}
+                postingMode={postingMode}
+              />
+            </div>
+            
+            {/* Agent Specific Scheduled Posts - Right Side */}
+            <div className="lg:col-span-1">
+              <AgentScheduledPosts agentId={completedAgent.id} />
+            </div>
           </div>
         )}
-
-        {/* Stats Cards Column */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{agentStats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                +{agentStats.newThisMonth} from last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Connected Accounts</CardTitle>
-              <Share2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{connectionStats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                Across {connectionStats.platformCount} platform{connectionStats.platformCount !== 1 ? 's' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Engagement</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">24.8k</div>
-              <p className="text-xs text-muted-foreground">
-                +19% from last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Automated Posts</CardTitle>
-              <Zap className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">573</div>
-              <p className="text-xs text-muted-foreground">
-                Last 30 days
-              </p>
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
-      <div className="mt-6">
-        <ScheduledPosts />
+      {/* Global Scheduled Posts Section */}
+      <div className="mt-6 grid grid-cols-1 gap-4">
+        {/* Stats Cards Column */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Agents</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{agentStats.total}</div>
+                <p className="text-xs text-muted-foreground">
+                  +{agentStats.newThisMonth} from last month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Connected Accounts</CardTitle>
+                <Share2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{connectionStats.total}</div>
+                <p className="text-xs text-muted-foreground">
+                  Across {connectionStats.platformCount} platform{connectionStats.platformCount !== 1 ? 's' : ''}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Engagement</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">24.8k</div>
+                <p className="text-xs text-muted-foreground">
+                  +19% from last month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Automated Posts</CardTitle>
+                <Zap className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">573</div>
+                <p className="text-xs text-muted-foreground">
+                  Last 30 days
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

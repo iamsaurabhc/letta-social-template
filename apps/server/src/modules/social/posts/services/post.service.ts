@@ -17,11 +17,11 @@ export class PostService {
     private readonly twitterPostService: TwitterPostService
   ) {}
 
-  async getScheduledPosts(page: number = 1, limit: number = 10) {
+  async getScheduledPosts(page: number = 1, limit: number = 10, agentId?: string) {
     try {
       const offset = (page - 1) * limit;
       
-      const { data, error, count } = await this.supabaseService.client
+      const query = this.supabaseService.client
         .from('social_posts')
         .select(`
           *,
@@ -34,8 +34,13 @@ export class PostService {
           )
         `, { count: 'exact' })
         .eq('status', 'scheduled')
-        .order('scheduled_for', { ascending: true })
-        .range(offset, offset + limit - 1);
+        .order('scheduled_for', { ascending: true });
+
+      if (agentId) {
+        query.eq('agent_id', agentId);
+      }
+
+      const { data, error, count } = await query.range(offset, offset + limit - 1);
 
       if (error) {
         this.logger.error('Error fetching scheduled posts:', error);
