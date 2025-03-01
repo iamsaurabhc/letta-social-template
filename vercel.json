@@ -46,7 +46,7 @@
     },
     {
       "path": "/api/cron/twitter-post",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 2 * * *"
     }
   ],
   "env": {
