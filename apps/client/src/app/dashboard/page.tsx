@@ -40,6 +40,8 @@ export default function DashboardPage() {
     platformCount: 0
   });
 
+  const [selectedAgent, setSelectedAgent] = useState<AgentData | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -112,11 +114,11 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-4 p-2 sm:p-4 md:p-8 pt-6">
       <DashboardHeader />
       
       {incompleteAgent && (
-        <div className="my-6">
+        <div className="my-4 sm:my-6">
           <AutomationStatus
             agentId={incompleteAgent.id}
             agentName={incompleteAgent.agentName}
@@ -127,24 +129,32 @@ export default function DashboardPage() {
       )}
       
       {/* Agent Detail and Stats Section */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 -mx-2 sm:mx-0">
         {/* Agent Detail Card Row */}
         {completedAgent && completedAgent.id && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {/* Agent Detail Card - Full Width */}
-            <div className="lg:col-span-2">
-              <AgentDetailCard 
-                agent={completedAgent} 
-                triggerDetails={triggerDetails}
-                postingMode={postingMode}
-              />
-            </div>
-            
-            {/* Agent Specific Scheduled Posts - Right Side */}
-            <div className="lg:col-span-1">
-              <AgentScheduledPosts agentId={completedAgent.id} />
-            </div>
-          </div>
+          <Card className="p-2 sm:p-4">
+            <CardHeader>
+              <CardTitle>Agent Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 sm:space-y-2 grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-2 p-2 sm:p-6">
+              {/* Agent Detail Card - Clickable */}
+              <div 
+                className="cursor-pointer hover:shadow-md transition-all rounded-lg overflow-hidden col-span-1 lg:col-span-2"
+                onClick={() => setSelectedAgent(completedAgent)}
+              >
+                <AgentDetailCard 
+                  agent={completedAgent} 
+                  triggerDetails={triggerDetails}
+                  postingMode={postingMode}
+                />
+              </div>
+              
+              {/* Agent Specific Scheduled Posts - Clickable */}
+              <div className="cursor-pointer hover:shadow-md transition-all rounded-lg overflow-hidden col-span-1 lg:col-span-1">
+                <AgentScheduledPosts agentId={completedAgent.id} />
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
