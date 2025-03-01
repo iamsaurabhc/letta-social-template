@@ -6,8 +6,10 @@ import { TwitterPostService } from './features/posts/services/post.service';
 import { TwitterEngagementService } from './features/engagement/services/engagement.service';
 import { TwitterProfileService } from './features/profile/services/profile.service';
 import { TwitterApiService } from './services/twitter-api.service';
+import { SupabaseModule } from '../../../supabase/supabase.module';
 
 @Module({
+  imports: [SupabaseModule],
   controllers: [
     TwitterPostController,
     TwitterEngagementController,

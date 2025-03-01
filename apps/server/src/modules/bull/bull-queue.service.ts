@@ -9,6 +9,7 @@ export class BullQueueService {
   constructor(
     @InjectQueue('content-generation') public contentGenerationQueue: Queue,
     @InjectQueue('engagement-monitoring') public engagementMonitoringQueue: Queue,
+    @InjectQueue('post-publisher') public postPublisherQueue: Queue,
   ) {}
 
   async scheduleCustom(queueName: string, data: any, schedule: { days: string[], time: string, postsPerPeriod?: number }) {
@@ -109,6 +110,8 @@ export class BullQueueService {
         return this.contentGenerationQueue;
       case 'engagement-monitoring':
         return this.engagementMonitoringQueue;
+      case 'post-publisher':
+        return this.postPublisherQueue;
       default:
         throw new Error(`Queue ${name} not found`);
     }

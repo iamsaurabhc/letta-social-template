@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LinkedInModule } from './linkedin/linkedin.module';
 import { TwitterModule } from './twitter/twitter.module';
 import { UserAgentController } from './controllers/user-agent.controller';
@@ -6,7 +6,7 @@ import { UserAgentService } from './services/user-agent.service';
 import { WebsiteScraperService } from './services/website-scraper.service';
 import { WebsiteScraperProcessor } from './processors/website-scraper.processor';
 import { BullModule } from '@nestjs/bull';
-import { LettaModule } from '../../modules/letta/letta.module';
+import { LettaModule } from '../letta/letta.module';
 import { SupabaseModule } from '../../supabase/supabase.module';
 import { TwitterAuthController } from './twitter/controllers/auth.controller';
 import { TwitterAuthService } from './twitter/services/auth.service';
@@ -26,39 +26,41 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
   imports: [
     TwitterModule,
     LinkedInModule,
+    BullModule.registerQueue(
+      {
+        name: 'website-scraping',
+      },
+      {
+        name: 'post-publisher',
+      }
+    ),
+    BullQueueModule,
+    forwardRef(() => LettaModule),
+    SupabaseModule,
+    AuthModule,
+    CacheModule,
     BullModule.registerQueue({
-      name: 'website-scraping',
+      name: 'content-generation',
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
       }
     }),
-    LettaModule,
-    SupabaseModule,
-    AuthModule,
-    CacheModule,
-    // BullModule.registerQueue({
-    //   name: 'content-generation',
-    //   redis: {
-    //     host: process.env.REDIS_HOST || 'localhost',
-    //     port: parseInt(process.env.REDIS_PORT || '6379'),
-    //   }
-    // }),
-    // BullModule.registerQueue({
-    //   name: 'engagement-monitoring',
-    //   redis: {
-    //     host: process.env.REDIS_HOST || 'localhost',
-    //     port: parseInt(process.env.REDIS_PORT || '6379'),
-    //   }
-    // }),
-    // BullQueueModule,
-    // BullModule.registerQueue({
-    //   name: 'post-publisher',
-    //   redis: {
-    //     host: process.env.REDIS_HOST || 'localhost',
-    //     port: parseInt(process.env.REDIS_PORT || '6379'),
-    //   }
-    // }),
+    BullModule.registerQueue({
+      name: 'engagement-monitoring',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      }
+    }),
+    BullQueueModule,
+    BullModule.registerQueue({
+      name: 'post-publisher',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      }
+    }),
   ],
   controllers: [
     UserAgentController,

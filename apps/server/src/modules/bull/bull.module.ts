@@ -11,6 +11,9 @@ import { BullQueueService } from './bull-queue.service';
       },
       {
         name: 'engagement-monitoring',
+      },
+      {
+        name: 'post-publisher',
       }
     ),
   ],

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { SupabaseService } from '../../../../supabase/supabase.service';
 import { CreateScheduledPostDto } from '../dto/create-scheduled-post.dto';
 import { BullQueueService } from '../../../bull/bull-queue.service';
@@ -13,6 +13,7 @@ export class PostService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly queueService: BullQueueService,
+    @Inject(forwardRef(() => AgentService))
     private readonly agentService: AgentService,
     private readonly twitterPostService: TwitterPostService
   ) {}

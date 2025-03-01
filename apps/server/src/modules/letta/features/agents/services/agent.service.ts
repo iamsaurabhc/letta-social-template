@@ -1,4 +1,4 @@
-import { Injectable, Logger, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BaseService } from '../../../services/base.service';
 import { LettaClient, LettaError } from '@letta-ai/letta-client';
@@ -19,6 +19,7 @@ export class AgentService extends BaseService {
   constructor(
     configService: ConfigService,
     private readonly queueService: BullQueueService,
+    @Inject(forwardRef(() => PostService))
     private readonly postService: PostService
   ) {
     super(AgentService.name, configService);

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AgentController } from './features/agents/controllers/agent.controller';
 import { AgentService } from './features/agents/services/agent.service';
 import { SourceController } from './features/sources/controllers/source.controller';
@@ -10,6 +10,8 @@ import { ToolService } from './features/tools/services/tool.service';
 import { BlockModule } from './features/blocks/block.module';
 import { AgentModule } from './features/agents/agent.module';
 import { BullQueueModule } from '../bull/bull.module';
+import { SupabaseModule } from '../../supabase/supabase.module';
+import { SocialModule } from '../social/social.module';
 
 @Module({
   controllers: [
@@ -27,7 +29,9 @@ import { BullQueueModule } from '../bull/bull.module';
   imports: [
     BlockModule,
     AgentModule,
-    BullQueueModule
+    BullQueueModule,
+    SupabaseModule,
+    forwardRef(() => SocialModule)
   ],
   exports: [
     AgentService,
