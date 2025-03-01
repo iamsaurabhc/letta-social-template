@@ -38,7 +38,7 @@
   "crons": [
     {
       "path": "/api/cron/generate-posts",
-      "schedule": "0 */4 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/analyze-engagement",
@@ -46,7 +46,7 @@
     },
     {
       "path": "/api/cron/twitter-post",
-      "schedule": "0 */4 * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }

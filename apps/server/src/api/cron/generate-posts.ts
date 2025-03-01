@@ -33,7 +33,23 @@ export default async function handler(req, res) {
     const activeAgents = await postService.getActiveAgentsForPosting();
     
     for (const agent of activeAgents) {
-      await agentService.generateAndSchedulePost(agent.id);
+      try {
+        // Generate multiple posts for the day
+        const postsPerDay = agent.social_connections[0]?.platform_settings?.posts_per_day || 5;
+        const today = new Date();
+        
+        for (let i = 0; i < postsPerDay; i++) {
+          // Calculate scheduled time (spread throughout the day)
+          const scheduledFor = new Date(today);
+          scheduledFor.setHours(9 + Math.floor((14 / postsPerDay) * i)); // Posts between 9 AM and 11 PM
+          scheduledFor.setMinutes(Math.floor(Math.random() * 60)); // Random minute
+
+          await agentService.generateAndSchedulePost(agent.id, undefined, scheduledFor);
+        }
+      } catch (error) {
+        console.error(`Failed to generate posts for agent ${agent.id}:`, error);
+        continue;
+      }
     }
 
     return res.status(200).json({ success: true });

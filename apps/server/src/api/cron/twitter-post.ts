@@ -26,22 +26,20 @@ export default async function handler(req, res) {
     const app = await getAppInstance();
     const postService = app.get(PostService);
 
-    // Get posts from two sources:
-    // 1. Approved posts from post_approvals
-    // 2. Posts from fully automated agents (no approval needed)
+    // Get posts scheduled for the next 15-minute window
+    const now = new Date();
+    const fifteenMinsFromNow = new Date(now.getTime() + 15 * 60000);
+
     const { data: postsToPublish, error } = await app.get('SupabaseService').client
       .from('social_posts')
       .select(`
         *,
-        post_approvals (
-          status
-        ),
-        social_connections!inner (
-          posting_mode
-        )
+        post_approvals (status),
+        social_connections!inner (posting_mode)
       `)
       .eq('status', 'scheduled')
-      .lte('scheduled_for', new Date().toISOString())
+      .gte('scheduled_for', now.toISOString())
+      .lt('scheduled_for', fifteenMinsFromNow.toISOString())
       .or(
         `and(post_approvals.status.eq.approved),
          and(social_connections.posting_mode.eq.automatic,post_approvals.status.is.null)`
@@ -58,6 +56,15 @@ export default async function handler(req, res) {
           format: post.metadata?.format || 'normal'
         });
       } catch (error) {
+        // Update post status to failed
+        await app.get('SupabaseService').client
+          .from('social_posts')
+          .update({
+            status: 'failed',
+            error_message: error.message
+          })
+          .eq('id', post.id);
+          
         console.error(`Failed to publish post ${post.id}:`, error);
         continue;
       }
