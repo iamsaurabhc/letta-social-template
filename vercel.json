@@ -48,5 +48,8 @@
       "path": "/api/cron/twitter-post",
       "schedule": "*/15 * * * *"
     }
-  ]
+  ],
+  "env": {
+    "CRON_SECRET": "@cron_secret"
+  }
 }
