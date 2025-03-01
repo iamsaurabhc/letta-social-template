@@ -8,10 +8,15 @@ export interface TwitterAuth {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  userId: string;
 }
 
 export interface TwitterResponse<T> {
   data: T;
+  meta?: {
+    result_count: number;
+    next_token?: string;
+  };
   errors?: Array<{
     code: string;
     message: string;
@@ -55,4 +60,13 @@ export interface TwitterMediaUploadResponse {
     w: number;
     h: number;
   };
+}
+
+export interface TwitterTimelineTweet {
+  id: string;
+  text: string;
+  created_at: string;
+  public_metrics: Record<string, number>;
+  entities?: Record<string, any>;
+  context_annotations?: Array<Record<string, any>>;
 } 

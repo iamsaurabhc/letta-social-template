@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/analyze-engagement",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/twitter-post",
+      "schedule": "0 */4 * * *"
     }
   ]
 }

@@ -644,7 +644,7 @@ export class AgentService extends BaseService {
     }
   }
 
-  async generateAndSchedulePost(agentId: string) {
+  async generateAndSchedulePost(agentId: string, userId?: string) {
     try {
       // Get agent settings
       const { data: agent } = await this.supabaseClient
@@ -665,12 +665,23 @@ export class AgentService extends BaseService {
       });
 
       // Store in database as scheduled
-      await this.postService.createScheduledPost({
+      const post = await this.postService.createScheduledPost({
         agentId: agent.id,
         content,
         scheduledFor: new Date(),
         status: 'scheduled'
       });
+
+      // Create approval entry if manually triggered
+      if (userId) {
+        await this.supabaseClient
+          .from('post_approvals')
+          .insert({
+            post_id: post.id,
+            requested_by: userId,
+            status: 'pending'
+          });
+      }
 
       return content;
     } catch (error) {
