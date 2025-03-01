@@ -3,13 +3,15 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { SupabaseService } from '../../../supabase/supabase.service';
 
 @Injectable()
 export class WebsiteScraperService {
   private readonly logger = new Logger(WebsiteScraperService.name);
 
   constructor(
-    @InjectQueue('website-scraping') private scrapingQueue: Queue
+    @InjectQueue('website-scraping') private scrapingQueue: Queue,
+    private readonly supabaseService: SupabaseService
   ) {}
 
   async queueWebsiteScraping(agentId: string, websiteUrl: string, lettaAgentId: string) {
@@ -50,6 +52,39 @@ export class WebsiteScraperService {
       };
     } catch (error) {
       this.logger.error(`Error scraping website: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getStoredWebsiteContent(agentId: string) {
+    try {
+      // First get the agent's website sources
+      const { data: sources, error: sourcesError } = await this.supabaseService.client
+        .from('agent_website_sources')
+        .select('website_id')
+        .eq('agent_id', agentId);
+
+      if (sourcesError) throw sourcesError;
+
+      if (!sources?.length) {
+        return { content: [] };
+      }
+
+      // Get content for all website sources
+      const websiteIds = sources.map(s => s.website_id);
+      const { data: content, error: contentError } = await this.supabaseService.client
+        .from('website_content')
+        .select('*')
+        .in('website_id', websiteIds)
+        .order('created_at', { ascending: false });
+
+      if (contentError) throw contentError;
+
+      return {
+        content: content || []
+      };
+    } catch (error) {
+      this.logger.error('Error fetching stored website content:', error);
       throw error;
     }
   }

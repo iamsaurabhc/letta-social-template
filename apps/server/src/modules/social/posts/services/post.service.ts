@@ -201,4 +201,123 @@ export class PostService {
       throw error;
     }
   }
+
+  async getPastPosts(agentId: string, platform: string, limit: number = 10) {
+    try {
+      const { data: posts, error } = await this.supabaseService.client
+        .from('social_posts')
+        .select('*')
+        .eq('agent_id', agentId)
+        .eq('platform', platform)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return posts;
+    } catch (error) {
+      this.logger.error('Error fetching past posts:', error);
+      throw error;
+    }
+  }
+
+  async getPostEngagement(postIds: string[]) {
+    try {
+      const { data: posts, error } = await this.supabaseService.client
+        .from('social_posts')
+        .select('id, platform_post_id, engagement_metrics, posted_at')
+        .in('id', postIds);
+
+      if (error) throw error;
+
+      // Format engagement data
+      return posts.map(post => ({
+        postId: post.id,
+        platformPostId: post.platform_post_id,
+        metrics: post.engagement_metrics || {},
+        postedAt: post.posted_at
+      }));
+    } catch (error) {
+      this.logger.error('Error fetching post engagement:', error);
+      throw error;
+    }
+  }
+
+  async createScheduledPost(data: {
+    agentId: string;
+    content: string;
+    scheduledFor: Date;
+    status: 'scheduled';
+  }) {
+    try {
+      // Get the connection for this agent
+      const { data: connection, error: connectionError } = await this.supabaseService.client
+        .from('social_connections')
+        .select('id, platform, user_id')
+        .eq('agent_id', data.agentId)
+        .single();
+
+      if (connectionError || !connection) {
+        throw new Error('No social connection found for this agent');
+      }
+
+      // Insert into social_posts table
+      const { data: post, error } = await this.supabaseService.client
+        .from('social_posts')
+        .insert({
+          content: data.content,
+          scheduled_for: data.scheduledFor.toISOString(),
+          agent_id: data.agentId,
+          connection_id: connection.id,
+          user_id: connection.user_id,
+          platform: connection.platform,
+          status: data.status,
+          metadata: {
+            format: 'normal' // Default format
+          }
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Database insertion error:', { error, data });
+        throw error;
+      }
+
+      // Schedule the post in the queue
+      await this.queueService.schedulePost('post-publisher', {
+        postId: post.id,
+        scheduledFor: data.scheduledFor,
+        content: data.content,
+        format: 'normal'
+      });
+
+      return post;
+    } catch (error) {
+      this.logger.error('Failed to create scheduled post:', error);
+      throw error;
+    }
+  }
+
+  async getActiveAgentsForPosting() {
+    try {
+      const { data: agents, error } = await this.supabaseService.client
+        .from('user_agents')
+        .select(`
+          *,
+          social_connections!inner (
+            id,
+            platform,
+            posting_mode,
+            platform_settings
+          )
+        `)
+        .eq('social_connections.posting_mode', 'automatic');
+
+      if (error) throw error;
+      return agents || [];
+    } catch (error) {
+      this.logger.error('Failed to get active agents for posting:', error);
+      throw error;
+    }
+  }
 } 

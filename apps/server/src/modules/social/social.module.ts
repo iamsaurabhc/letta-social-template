@@ -37,28 +37,28 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
     SupabaseModule,
     AuthModule,
     CacheModule,
-    BullModule.registerQueue({
-      name: 'content-generation',
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      }
-    }),
-    BullModule.registerQueue({
-      name: 'engagement-monitoring',
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      }
-    }),
-    BullQueueModule,
-    BullModule.registerQueue({
-      name: 'post-publisher',
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      }
-    }),
+    // BullModule.registerQueue({
+    //   name: 'content-generation',
+    //   redis: {
+    //     host: process.env.REDIS_HOST || 'localhost',
+    //     port: parseInt(process.env.REDIS_PORT || '6379'),
+    //   }
+    // }),
+    // BullModule.registerQueue({
+    //   name: 'engagement-monitoring',
+    //   redis: {
+    //     host: process.env.REDIS_HOST || 'localhost',
+    //     port: parseInt(process.env.REDIS_PORT || '6379'),
+    //   }
+    // }),
+    // BullQueueModule,
+    // BullModule.registerQueue({
+    //   name: 'post-publisher',
+    //   redis: {
+    //     host: process.env.REDIS_HOST || 'localhost',
+    //     port: parseInt(process.env.REDIS_PORT || '6379'),
+    //   }
+    // }),
   ],
   controllers: [
     UserAgentController,

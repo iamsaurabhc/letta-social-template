@@ -6,7 +6,6 @@ import { SocialModule } from './modules/social/social.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AppController } from './app.controller';
 import { BullModule } from '@nestjs/bull';
-import { WorkflowModule } from './modules/workflow/workflow.module';
 import { SupabaseConnectionPool } from './supabase/connection-pool.service';
 import { CacheModule } from './modules/cache/cache.module';
 
@@ -55,7 +54,6 @@ import { CacheModule } from './modules/cache/cache.module';
       }),
       inject: [ConfigService],
     }),
-    WorkflowModule,
   ],
   controllers: [AppController],
 })

@@ -3,8 +3,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { GlobalExceptionFilter } from './middleware/error.middleware';
-import { WorkflowService } from './modules/workflow/workflow.service';
-
 const logger = new Logger('Bootstrap');
 let app;
 
@@ -41,15 +39,6 @@ async function bootstrap() {
 
     await app.init();
     logger.log('NestJS application initialized');
-
-    // Only initialize schedules in production environment
-    if (process.env.NODE_ENV === 'production') {
-      const workflowService = app.get(WorkflowService);
-      await workflowService.initializeSchedules()
-        .catch(error => {
-          logger.error('Failed to initialize schedules:', error);
-        });
-    }
 
     // Start listening if in local development
     if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {

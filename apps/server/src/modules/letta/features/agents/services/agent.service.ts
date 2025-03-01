@@ -9,6 +9,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { TriggersDto, TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
 import { BullQueueService } from '../../../../bull/bull-queue.service';
 import { AssistantMessage } from '@letta-ai/letta-client/api';
+import { PostService } from '@/modules/social/posts/services/post.service';
 
 @Injectable()
 export class AgentService extends BaseService {
@@ -17,7 +18,8 @@ export class AgentService extends BaseService {
 
   constructor(
     configService: ConfigService,
-    private readonly queueService: BullQueueService
+    private readonly queueService: BullQueueService,
+    private readonly postService: PostService
   ) {
     super(AgentService.name, configService);
     
@@ -639,6 +641,41 @@ export class AgentService extends BaseService {
         errorDetails: error
       });
       throw new Error('Failed to process generated content');
+    }
+  }
+
+  async generateAndSchedulePost(agentId: string) {
+    try {
+      // Get agent settings
+      const { data: agent } = await this.supabaseClient
+        .from('user_agents')
+        .select('*, social_connections(*)')
+        .eq('id', agentId)
+        .single();
+
+      if (!agent) {
+        throw new Error('Agent not found');
+      }
+
+      // Generate content
+      const content = await this.generatePost({
+        agentId: agent.id,
+        format: agent.social_connections?.platform_settings?.format || 'normal',
+        scheduledFor: new Date()
+      });
+
+      // Store in database as scheduled
+      await this.postService.createScheduledPost({
+        agentId: agent.id,
+        content,
+        scheduledFor: new Date(),
+        status: 'scheduled'
+      });
+
+      return content;
+    } catch (error) {
+      this.logger.error('Failed to generate and schedule post:', error);
+      throw error;
     }
   }
 } 

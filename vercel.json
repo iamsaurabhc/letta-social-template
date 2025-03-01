@@ -34,5 +34,15 @@
       "src": "/(.*)",
       "dest": "apps/client/$1"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/generate-posts",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/analyze-engagement",
+      "schedule": "0 0 * * *"
+    }
   ]
 }
