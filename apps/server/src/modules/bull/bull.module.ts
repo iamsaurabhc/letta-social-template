@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
-import { WorkflowService } from '../workflow/workflow.service';
 import { BullQueueService } from './bull-queue.service';
 
 @Module({
@@ -15,7 +14,7 @@ import { BullQueueService } from './bull-queue.service';
       }
     ),
   ],
-  providers: [WorkflowService, BullQueueService],
-  exports: [WorkflowService, BullQueueService],
+  providers: [BullQueueService],
+  exports: [BullQueueService],
 })
 export class BullQueueModule {} 
