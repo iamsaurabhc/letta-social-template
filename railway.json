@@ -14,6 +14,7 @@
             "cmds": [
               "npm install -g corepack",
               "corepack enable",
+              "corepack prepare pnpm@8.15.4 --activate",
               "cd apps/server",
               "pnpm install"
             ]
