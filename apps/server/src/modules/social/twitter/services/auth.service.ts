@@ -141,7 +141,7 @@ export class TwitterAuthService {
         });
 
       // Add timeline fetch job to queue
-      await this.queueService.addJob('twitter-timeline', 'fetch', {
+      await this.queueService.addToQueue('twitter-timeline', 'fetch', {
         userId: userId,
         agentId: agentId,
         auth: {

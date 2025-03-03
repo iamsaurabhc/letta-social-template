@@ -1,15 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { TwitterApiService } from '../../../services/twitter-api.service';
 import { TwitterAuth, TwitterUser, TwitterTimelineTweet } from '../../../interfaces/twitter.interface';
 import { SupabaseService } from '@/supabase/supabase.service';
+import { AgentService } from '@/modules/letta/features/agents/services/agent.service';
+import { BlockService } from '@/modules/letta/features/blocks/services/block.service';
 
 @Injectable()
 export class TwitterProfileService {
   private readonly logger = new Logger(TwitterProfileService.name);
+  private readonly MAX_POSTS = 20;
 
   constructor(
     private readonly twitterApiService: TwitterApiService,
-    private readonly supabaseService: SupabaseService
+    private readonly supabaseService: SupabaseService,
+    private readonly blockService: BlockService,
+    @Inject(forwardRef(() => AgentService))
+    private readonly agentService: AgentService,
   ) {}
 
   async getMyAccountDetails(auth: TwitterAuth): Promise<TwitterUser> {
@@ -51,7 +57,7 @@ export class TwitterProfileService {
   async fetchAndStoreTimeline(auth: TwitterAuth, userId: string, agentId: string) {
     try {
       const params = new URLSearchParams({
-        'max_results': '100',
+        'max_results': this.MAX_POSTS.toString(),
         'tweet.fields': 'created_at,public_metrics,entities,context_annotations',
         'exclude_replies': 'false',
         'include_rts': 'true'
@@ -82,6 +88,7 @@ export class TwitterProfileService {
         created_at_platform: new Date(tweet.created_at)
       }));
 
+      // Store in Supabase
       const { error } = await this.supabaseService.client
         .from('twitter_timeline_entries')
         .upsert(tweets, { 
@@ -91,10 +98,88 @@ export class TwitterProfileService {
 
       if (error) throw error;
 
+      // Prepare context for agent memory
+      const tweetContext = tweets.map(tweet => ({
+        content: tweet.content,
+        engagement: tweet.engagement_metrics,
+        created_at: tweet.created_at_platform,
+        entities: tweet.metadata.entities,
+        context_annotations: tweet.metadata.context_annotations
+      }));
+
+      const analysisData = {
+        tweets: tweetContext,
+        analysis: {
+          total_posts: tweetContext.length,
+          average_engagement: this.calculateAverageEngagement(tweetContext),
+          common_topics: this.extractCommonTopics(tweetContext),
+          posting_frequency: this.calculatePostingFrequency(tweetContext)
+        }
+      };
+
+      // Create a new block with the timeline data
+      const block = await this.blockService.createBlock({
+        value: JSON.stringify(analysisData),
+        label: 'twitter_timeline',
+        description: 'Twitter timeline analysis and context',
+        metadata: {
+          updated_at: new Date().toISOString(),
+          tweet_count: tweetContext.length
+        }
+      });
+
+      // Attach block to agent's core memory
+      await this.agentService.updateAgentCoreMemoryBlock(
+        agentId,
+        'twitter_timeline',
+        {
+          value: JSON.stringify(analysisData),
+          metadata: {
+            updated_at: new Date().toISOString(),
+            tweet_count: tweetContext.length
+          }
+        }
+      );
+
       return tweets;
     } catch (error) {
       this.logger.error('Failed to fetch and store timeline:', error);
       throw error;
     }
+  }
+
+  private calculateAverageEngagement(tweets: any[]): any {
+    const totals = tweets.reduce((acc, tweet) => {
+      acc.likes += tweet.engagement.like_count || 0;
+      acc.retweets += tweet.engagement.retweet_count || 0;
+      acc.replies += tweet.engagement.reply_count || 0;
+      return acc;
+    }, { likes: 0, retweets: 0, replies: 0 });
+
+    return {
+      avg_likes: Math.round(totals.likes / tweets.length),
+      avg_retweets: Math.round(totals.retweets / tweets.length),
+      avg_replies: Math.round(totals.replies / tweets.length)
+    };
+  }
+
+  private extractCommonTopics(tweets: any[]): string[] {
+    const topics = tweets.flatMap(tweet => 
+      tweet.context_annotations?.map(ca => ca.domain?.name) || []
+    );
+    
+    return [...new Set(topics)].slice(0, 5); // Return top 5 unique topics
+  }
+
+  private calculatePostingFrequency(tweets: any[]): any {
+    if (tweets.length < 2) return { posts_per_day: 0, total_days: 0 };
+    
+    const dates = tweets.map(t => new Date(t.created_at));
+    const totalDays = (dates[0].getTime() - dates[dates.length-1].getTime()) / (1000 * 60 * 60 * 24);
+    
+    return {
+      posts_per_day: Math.round((tweets.length / totalDays) * 100) / 100,
+      total_days: Math.round(totalDays)
+    };
   }
 } 

@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsObject } from 'class-validator';
 
 export class ModifyBlockDto {
   @IsString()
@@ -8,4 +8,8 @@ export class ModifyBlockDto {
   @IsNumber()
   @IsOptional()
   limit?: number;
+
+  @IsObject()
+  @IsOptional()
+  metadata?: Record<string, any>;
 } 
