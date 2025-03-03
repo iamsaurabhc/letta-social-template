@@ -32,6 +32,13 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
       },
       {
         name: 'post-publisher',
+      },
+      {
+        name: 'twitter-timeline',
+        redis: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+        }
       }
     ),
     BullQueueModule,

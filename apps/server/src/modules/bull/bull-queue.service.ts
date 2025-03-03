@@ -10,6 +10,7 @@ export class BullQueueService {
     @InjectQueue('content-generation') public contentGenerationQueue: Queue,
     @InjectQueue('engagement-monitoring') public engagementMonitoringQueue: Queue,
     @InjectQueue('post-publisher') public postPublisherQueue: Queue,
+    @InjectQueue('twitter-timeline') public twitterTimelineQueue: Queue,
   ) {}
 
   async scheduleCustom(queueName: string, data: any, schedule: { days: string[], time: string, postsPerPeriod?: number }) {
@@ -104,6 +105,15 @@ export class BullQueueService {
     });
   }
 
+  // Add new method for generic queue operations
+  async addToQueue(queueName: string, jobType: string, data: any) {
+    const queue = this.getQueue(queueName);
+    return await queue.add(jobType, data, {
+      removeOnComplete: true,
+      removeOnFail: true
+    });
+  }
+
   private getQueue(name: string): Queue {
     switch (name) {
       case 'content-generation':
@@ -112,6 +122,8 @@ export class BullQueueService {
         return this.engagementMonitoringQueue;
       case 'post-publisher':
         return this.postPublisherQueue;
+      case 'twitter-timeline':
+        return this.twitterTimelineQueue;
       default:
         throw new Error(`Queue ${name} not found`);
     }

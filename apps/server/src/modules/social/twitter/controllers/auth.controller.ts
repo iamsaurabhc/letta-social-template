@@ -1,8 +1,9 @@
-import { Controller, Get, Req, Res, UseGuards, Logger, UnauthorizedException, BadRequestException, Query } from '@nestjs/common';
+import { Controller, Get, Req, Res, UseGuards, Logger, UnauthorizedException, BadRequestException, Query, Request } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../../../../auth/guards/jwt.guard';
 import { TwitterAuthService } from '../services/auth.service';
+import { SupabaseService } from '../../../../supabase/supabase.service';
 
 // Custom interface for the request with user property
 interface AuthenticatedRequest {
@@ -19,12 +20,14 @@ interface AuthenticatedRequest {
 }
 
 @Controller('social/twitter/auth')
+@UseGuards(JwtAuthGuard)
 export class TwitterAuthController {
   private readonly logger = new Logger(TwitterAuthController.name);
   
   constructor(
     private readonly configService: ConfigService,
     private readonly twitterAuthService: TwitterAuthService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   @Get('url')
@@ -86,5 +89,34 @@ export class TwitterAuthController {
       const errorMessage = encodeURIComponent(error.message || 'Failed to authenticate with Twitter');
       return response.redirect(`${clientUrl}/dashboard/automation?step=social&status=error&message=${errorMessage}`);
     }
+  }
+
+  @Get('timeline-status')
+  @UseGuards(JwtAuthGuard)
+  async getTimelineStatus(
+    @Query('agentId') agentId: string,
+    @Request() req
+  ) {
+    if (!agentId) {
+      throw new BadRequestException('Agent ID is required');
+    }
+
+    const { data, error } = await this.supabaseService.client
+      .from('social_connections')
+      .select('timeline_synced, timeline_synced_at')
+      .eq('user_id', req.user.id)
+      .eq('agent_id', agentId)
+      .eq('platform', 'twitter')
+      .single();
+
+    if (error) {
+      this.logger.error('Failed to get timeline status:', error);
+      throw new BadRequestException('Failed to get timeline status');
+    }
+
+    return {
+      timelineSynced: data?.timeline_synced || false,
+      syncedAt: data?.timeline_synced_at
+    };
   }
 } 

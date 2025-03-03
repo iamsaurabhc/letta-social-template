@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2, CheckCircle } from "lucide-react";
 import { useAgentStore } from "@/stores/agentStore";
 
 interface Props {
@@ -35,6 +35,7 @@ export default function LinkSocial({ onNext }: Props) {
   const { toast } = useToast();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [inspirationUrls, setInspirationUrls] = useState<string[]>([]);
+  const [timelineFetchStatus, setTimelineFetchStatus] = useState<'pending' | 'completed' | null>(null);
 
   useEffect(() => {
     fetchConnections();
@@ -89,6 +90,36 @@ export default function LinkSocial({ onNext }: Props) {
       fetchConnections();
     }
   }, [searchParams, router]);
+
+  useEffect(() => {
+    const twitterData = searchParams.get('twitterData');
+    
+    if (twitterData) {
+      try {
+        const parsedData = JSON.parse(decodeURIComponent(twitterData));
+        setTimelineFetchStatus('pending');
+        
+        // Poll for timeline sync status
+        const pollInterval = setInterval(async () => {
+          try {
+            const agentId = searchParams.get('agentId');
+            const response = await api.get(`/social/twitter/auth/timeline-status?agentId=${agentId}`);
+            
+            if (response.data.timelineSynced) {
+              setTimelineFetchStatus('completed');
+              clearInterval(pollInterval);
+            }
+          } catch (error) {
+            console.error('Failed to check timeline status:', error);
+          }
+        }, 2000);
+
+        return () => clearInterval(pollInterval);
+      } catch (error) {
+        console.error('Failed to parse Twitter data:', error);
+      }
+    }
+  }, [searchParams]);
 
   const fetchConnections = async () => {
     try {
@@ -156,6 +187,26 @@ export default function LinkSocial({ onNext }: Props) {
     }
   };
 
+  const renderTimelineStatus = (platform: string) => {
+    if (platform !== 'twitter' || !isConnected(platform)) return null;
+
+    return (
+      <div className="mt-2 text-sm">
+        {timelineFetchStatus === 'pending' ? (
+          <div className="flex items-center text-muted-foreground">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Fetching your timeline...
+          </div>
+        ) : timelineFetchStatus === 'completed' ? (
+          <div className="flex items-center text-green-600">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Agent has timeline access
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -179,7 +230,7 @@ export default function LinkSocial({ onNext }: Props) {
                 {isConnected(platform.id) 
                 ? `Connected as @${connections.find(c => c.platform === platform.id)?.username || ''}` 
                 : "Not connected"}
-            </CardDescription>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
@@ -189,6 +240,7 @@ export default function LinkSocial({ onNext }: Props) {
               >
                 {isConnected(platform.id) ? "Connected" : "Connect"}
               </Button>
+              {renderTimelineStatus(platform.id)}
             </CardContent>
           </Card>
         ))}
