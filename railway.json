@@ -7,11 +7,12 @@
         "providers": ["node"],
         "phases": {
           "setup": {
-            "nixPkgs": ["redis"]
+            "nixPkgs": ["redis", "nodejs"]
           },
           "install": {
             "dependsOn": ["setup"],
             "cmds": [
+              "npm install -g corepack",
               "corepack enable",
               "cd apps/server",
               "pnpm install"
