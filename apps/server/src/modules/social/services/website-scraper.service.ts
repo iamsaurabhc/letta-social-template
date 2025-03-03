@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { QUEUE_NAMES } from '../../bull/bull-queues.config';
 import { SupabaseService } from '../../../supabase/supabase.service';
 
 @Injectable()
@@ -10,7 +11,7 @@ export class WebsiteScraperService {
   private readonly logger = new Logger(WebsiteScraperService.name);
 
   constructor(
-    @InjectQueue('website-scraping') private scrapingQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.WEBSITE_SCRAPING) private readonly scrapingQueue: Queue,
     private readonly supabaseService: SupabaseService
   ) {}
 

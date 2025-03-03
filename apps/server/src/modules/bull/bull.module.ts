@@ -1,23 +1,26 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullQueueService } from './bull-queue.service';
+import { queueConfig } from './bull-queues.config';
 
 @Module({
   imports: [
-    BullModule.registerQueue(
-      {
-        name: 'content-generation',
-      },
-      {
-        name: 'engagement-monitoring',
-      },
-      {
-        name: 'post-publisher',
-      }
-    ),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        redis: {
+          host: configService.get('REDIS_HOST'),
+          port: configService.get('REDIS_PORT'),
+          password: configService.get('REDIS_PASSWORD'),
+          tls: configService.get('REDIS_TLS') ? {} : undefined
+        }
+      }),
+      inject: [ConfigService],
+    }),
+    BullModule.registerQueue(...queueConfig)
   ],
   providers: [BullQueueService],
-  exports: [BullQueueService],
+  exports: [BullQueueService, BullModule]
 })
 export class BullQueueModule {} 

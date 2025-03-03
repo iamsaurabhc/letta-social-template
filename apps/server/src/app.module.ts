@@ -41,7 +41,12 @@ import { CacheModule } from './modules/cache/cache.module';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        redis: `rediss://default:${configService.get('REDIS_PASSWORD')}@${configService.get('REDIS_HOST')}:${configService.get('REDIS_PORT')}`,
+        redis: {
+          host: configService.get('REDIS_HOST'),
+          port: configService.get('REDIS_PORT'),
+          password: configService.get('REDIS_PASSWORD'),
+          tls: configService.get('REDIS_TLS') ? {} : undefined
+        },
         defaultJobOptions: {
           removeOnComplete: true,
           removeOnFail: true,
@@ -53,7 +58,7 @@ import { CacheModule } from './modules/cache/cache.module';
         }
       }),
       inject: [ConfigService],
-    }),
+    })
   ],
   controllers: [AppController],
 })

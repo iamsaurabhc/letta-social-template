@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TwitterPostController } from './features/posts/controllers/post.controller';
 import { TwitterEngagementController } from './features/engagement/controllers/engagement.controller';
 import { TwitterProfileController } from './features/profile/controllers/profile.controller';
@@ -7,9 +7,16 @@ import { TwitterEngagementService } from './features/engagement/services/engagem
 import { TwitterProfileService } from './features/profile/services/profile.service';
 import { TwitterApiService } from './services/twitter-api.service';
 import { SupabaseModule } from '../../../supabase/supabase.module';
+import { TwitterAuthService } from './services/auth.service';
+import { LettaModule } from '../../letta/letta.module';
+import { BullQueueModule } from '../../bull/bull.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [
+    SupabaseModule,
+    forwardRef(() => LettaModule),
+    BullQueueModule
+  ],
   controllers: [
     TwitterPostController,
     TwitterEngagementController,
@@ -19,8 +26,15 @@ import { SupabaseModule } from '../../../supabase/supabase.module';
     TwitterPostService,
     TwitterEngagementService,
     TwitterProfileService,
-    TwitterApiService
+    TwitterApiService,
+    TwitterAuthService
   ],
-  exports: [TwitterPostService, TwitterEngagementService, TwitterProfileService, TwitterApiService]
+  exports: [
+    TwitterPostService,
+    TwitterEngagementService,
+    TwitterProfileService,
+    TwitterApiService,
+    TwitterAuthService
+  ]
 })
 export class TwitterModule {} 

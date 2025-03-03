@@ -24,50 +24,12 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
 
 @Module({
   imports: [
-    TwitterModule,
+    forwardRef(() => TwitterModule),
     LinkedInModule,
-    BullModule.registerQueue(
-      {
-        name: 'website-scraping',
-      },
-      {
-        name: 'post-publisher',
-      },
-      {
-        name: 'twitter-timeline',
-        redis: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
-        }
-      }
-    ),
-    BullQueueModule,
     forwardRef(() => LettaModule),
     SupabaseModule,
-    AuthModule,
-    CacheModule,
-    BullModule.registerQueue({
-      name: 'content-generation',
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      }
-    }),
-    BullModule.registerQueue({
-      name: 'engagement-monitoring',
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      }
-    }),
     BullQueueModule,
-    BullModule.registerQueue({
-      name: 'post-publisher',
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      }
-    }),
+    CacheModule
   ],
   controllers: [
     UserAgentController,
@@ -92,7 +54,8 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
     LinkedInModule,
     UserAgentService,
     PostService,
-    TwitterPostService
+    TwitterPostService,
+    WebsiteScraperService
   ]
 })
 export class SocialModule {} 

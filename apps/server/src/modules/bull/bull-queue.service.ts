@@ -1,16 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
+import { QUEUE_NAMES } from './bull-queues.config';
 
 @Injectable()
 export class BullQueueService {
   private readonly logger = new Logger(BullQueueService.name);
 
   constructor(
-    @InjectQueue('content-generation') public contentGenerationQueue: Queue,
-    @InjectQueue('engagement-monitoring') public engagementMonitoringQueue: Queue,
-    @InjectQueue('post-publisher') public postPublisherQueue: Queue,
-    @InjectQueue('twitter-timeline') public twitterTimelineQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.WEBSITE_SCRAPING)
+    private readonly websiteScrapingQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.CONTENT_GENERATION)
+    private readonly contentGenerationQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.ENGAGEMENT_MONITORING)
+    private readonly engagementMonitoringQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.POST_PUBLISHER)
+    private readonly postPublisherQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.TWITTER_TIMELINE)
+    private readonly twitterTimelineQueue: Queue,
   ) {}
 
   async scheduleCustom(queueName: string, data: any, schedule: { days: string[], time: string, postsPerPeriod?: number }) {
@@ -116,13 +123,15 @@ export class BullQueueService {
 
   private getQueue(name: string): Queue {
     switch (name) {
-      case 'content-generation':
+      case QUEUE_NAMES.WEBSITE_SCRAPING:
+        return this.websiteScrapingQueue;
+      case QUEUE_NAMES.CONTENT_GENERATION:
         return this.contentGenerationQueue;
-      case 'engagement-monitoring':
+      case QUEUE_NAMES.ENGAGEMENT_MONITORING:
         return this.engagementMonitoringQueue;
-      case 'post-publisher':
+      case QUEUE_NAMES.POST_PUBLISHER:
         return this.postPublisherQueue;
-      case 'twitter-timeline':
+      case QUEUE_NAMES.TWITTER_TIMELINE:
         return this.twitterTimelineQueue;
       default:
         throw new Error(`Queue ${name} not found`);
