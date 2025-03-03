@@ -4,7 +4,7 @@
       "builder": "NIXPACKS",
       "buildCommand": "cd apps/server && pnpm install && pnpm build",
       "nixpacksPlan": {
-        "providers": ["node", "redis"],
+        "providers": ["node"],
         "phases": {
           "setup": {
             "nixPkgs": ["redis"]
