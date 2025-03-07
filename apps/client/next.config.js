@@ -10,10 +10,8 @@ const nextConfig = {
       ? 'http://localhost:3001/api'
       : '/api'
   },
-  experimental: {
-    // Disable automatic static optimization for pages that need context
-    automaticStaticOptimization: false
-  },
+  // Disable static generation completely
+  staticPageGenerationTimeout: 0,
   images: {
     domains: ['avatars.githubusercontent.com']
   }
