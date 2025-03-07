@@ -13,6 +13,9 @@ const nextConfig = {
   experimental: {
     // Disable automatic static optimization for pages that need context
     automaticStaticOptimization: false
+  },
+  images: {
+    domains: ['avatars.githubusercontent.com']
   }
 }
 
