@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { createSupabaseClient } from '@common/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -8,9 +10,13 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createSupabaseClient();
+  
+  // Only create client on mount
+  const supabase = typeof window !== 'undefined' ? createSupabaseClient() : null;
 
   useEffect(() => {
+    if (!supabase) return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
@@ -19,9 +25,10 @@ export const useAuth = () => {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const signIn = async (email: string, password: string) => {
+    if (!supabase) return null;
     try {
       const response = await api.post('/auth/signin', { email, password });
       const { session } = response.data;
@@ -47,6 +54,7 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
+    if (!supabase) return;
     await supabase.auth.signOut();
     router.push('/login');
   };
