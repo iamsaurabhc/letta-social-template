@@ -2,7 +2,7 @@
     "$schema": "https://railway.app/railway.schema.json",
     "build": {
       "builder": "NIXPACKS",
-      "buildCommand": "pnpm install && pnpm build",
+      "buildCommand": "cd apps/server && pnpm install && pnpm build",
       "nixpacksPlan": {
         "providers": ["node"],
         "phases": {
@@ -15,26 +15,26 @@
               "npm install -g corepack",
               "corepack enable",
               "corepack prepare pnpm@8.15.4 --activate",
+              "cd apps/server",
               "pnpm install"
             ]
           },
           "build": {
             "dependsOn": ["install"],
             "cmds": [
-              "pnpm build:common",
-              "pnpm --filter client build",
-              "pnpm --filter server build"
+              "cd apps/server",
+              "pnpm build"
             ]
           }
         }
       }
     },
     "deploy": {
-      "startCommand": "pnpm start",
+      "startCommand": "cd apps/server && node dist/main",
       "healthcheckPath": "/api/health",
       "healthcheckTimeout": 100,
       "restartPolicyType": "ON_FAILURE",
       "restartPolicyMaxRetries": 3,
-      "numReplicas": 2
+      "numReplicas": 1
     }
   }
