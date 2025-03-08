@@ -30,6 +30,7 @@ async function bootstrap() {
     const allowedOrigins = [
       'http://localhost:3000',
       'https://social-auto-agent.vercel.app',
+      'https://social-auto-client.up.railway.app',
       process.env.NEXT_PUBLIC_CLIENT_URL,
     ].filter(Boolean);
 
