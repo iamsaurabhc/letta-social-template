@@ -9,14 +9,12 @@ import { TwitterApiService } from './services/twitter-api.service';
 import { SupabaseModule } from '../../../supabase/supabase.module';
 import { TwitterAuthService } from './services/auth.service';
 import { LettaModule } from '../../letta/letta.module';
-import { BullQueueModule } from '../../bull/bull.module';
 import { TwitterClient } from './twitter.client';
 
 @Module({
   imports: [
     SupabaseModule,
     forwardRef(() => LettaModule),
-    BullQueueModule
   ],
   controllers: [
     TwitterPostController,

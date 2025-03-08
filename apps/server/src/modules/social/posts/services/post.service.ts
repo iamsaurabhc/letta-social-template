@@ -1,7 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { SupabaseService } from '../../../../supabase/supabase.service';
 import { CreateScheduledPostDto } from '../dto/create-scheduled-post.dto';
-import { BullQueueService } from '../../../bull/bull-queue.service';
 import { AgentService } from '../../../letta/features/agents/services/agent.service';
 import { TwitterAuth } from '../../twitter/interfaces/twitter.interface';
 import { TwitterPostService } from '../../twitter/features/posts/services/post.service';
@@ -12,7 +11,6 @@ export class PostService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly queueService: BullQueueService,
     @Inject(forwardRef(() => AgentService))
     private readonly agentService: AgentService,
     private readonly twitterPostService: TwitterPostService
@@ -108,16 +106,7 @@ export class PostService {
         throw error;
       }
 
-      this.logger.debug('Post inserted successfully:', { post });
-
-      // Schedule the post in the queue
-      await this.queueService.schedulePost('post-publisher', {
-        postId: post.id,
-        scheduledFor: scheduledForDate,
-        content: createPostDto.content,
-        format: createPostDto.format
-      });
-
+      this.logger.debug('Post scheduled successfully:', { post });
       return post;
     } catch (error) {
       this.logger.error('Error scheduling post:', {
@@ -286,14 +275,7 @@ export class PostService {
         throw error;
       }
 
-      // Schedule the post in the queue
-      await this.queueService.schedulePost('post-publisher', {
-        postId: post.id,
-        scheduledFor: data.scheduledFor,
-        content: data.content,
-        format: 'normal'
-      });
-
+      this.logger.debug('Post scheduled successfully:', { post });
       return post;
     } catch (error) {
       this.logger.error('Failed to create scheduled post:', error);
