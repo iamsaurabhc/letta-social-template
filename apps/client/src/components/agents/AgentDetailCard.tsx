@@ -128,7 +128,7 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
       // Determine format based on trigger details or default to 'both'
       const format = triggerDetails?.newPosts?.format || 'both';
       
-      const response = await api.post<GenerationResponse>(`/workflow/agents/generate-content`, {
+      const response = await api.post<GenerationResponse>(`/social/posts/generate`, {
         agentId: agent.id,
         settings: {
           format

@@ -21,6 +21,7 @@ import { BullQueueModule } from '../bull/bull.module';
 import { CacheModule } from '../cache/cache.module';
 import { PostController } from './posts/controllers/post.controller';
 import { PostPublisherProcessor } from './posts/processors/post-publisher.processor';
+import { AgentService } from '../letta/features/agents/services/agent.service';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
     SupabaseService,
     PostService,
     TwitterPostService,
-    PostPublisherProcessor
+    PostPublisherProcessor,
+    AgentService
   ],
   exports: [
     TwitterModule,
@@ -55,7 +57,8 @@ import { PostPublisherProcessor } from './posts/processors/post-publisher.proces
     UserAgentService,
     PostService,
     TwitterPostService,
-    WebsiteScraperService
+    WebsiteScraperService,
+    AgentService
   ]
 })
 export class SocialModule {} 
