@@ -3,9 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { GlobalExceptionFilter } from './middleware/error.middleware';
-import * as cron from 'node-cron';
-import { PostService } from './modules/social/posts/services/post.service';
-import { AgentService } from './modules/letta/features/agents/services/agent.service';
+
 const logger = new Logger('Bootstrap');
 let app;
 
@@ -54,33 +52,6 @@ async function bootstrap() {
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
       credentials: true,
       maxAge: 86400, // Cache CORS preflight for 24 hours
-    });
-
-    // Get services
-    const postService = app.get(PostService);
-    const agentService = app.get(AgentService);
-
-    // Generate posts at midnight
-    cron.schedule('0 0 * * *', async () => {
-      try {
-        const activeAgents = await postService.getActiveAgentsForPosting();
-        for (const agent of activeAgents) {
-          await agentService.generateAndSchedulePost(agent.id);
-        }
-      } catch (error) {
-        console.error('Failed to generate posts:', error);
-      }
-    });
-
-    // Post to Twitter at 2 AM
-    cron.schedule('0 2 * * *', async () => {
-      try {
-        const now = new Date();
-        const fifteenMinsFromNow = new Date(now.getTime() + 15 * 60000);
-        await postService.publishScheduledPosts(now, fifteenMinsFromNow);
-      } catch (error) {
-        console.error('Failed to post to Twitter:', error);
-      }
     });
 
     await app.init();

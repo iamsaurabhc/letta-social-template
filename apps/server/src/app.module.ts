@@ -8,6 +8,8 @@ import { AppController } from './app.controller';
 import { BullModule } from '@nestjs/bull';
 import { SupabaseConnectionPool } from './supabase/connection-pool.service';
 import { CacheModule } from './modules/cache/cache.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { CacheModule } from './modules/cache/cache.module';
         REDIS_URL: process.env.REDIS_URL,
       })],
     }),
+    ScheduleModule.forRoot(),
+    SchedulerModule,
     CacheModule,
     AuthModule,
     LettaModule,

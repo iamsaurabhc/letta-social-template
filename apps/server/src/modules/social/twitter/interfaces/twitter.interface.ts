@@ -1,7 +1,7 @@
 export interface BaseEntity {
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TwitterAuth {
@@ -9,6 +9,12 @@ export interface TwitterAuth {
   refreshToken: string;
   expiresAt: number;
   userId: string;
+}
+
+export interface TweetResponse {
+  id: string;
+  text: string;
+  url?: string;
 }
 
 export interface TwitterResponse<T> {

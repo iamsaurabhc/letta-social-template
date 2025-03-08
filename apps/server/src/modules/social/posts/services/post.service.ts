@@ -323,4 +323,213 @@ export class PostService {
       throw error;
     }
   }
+
+  async publishScheduledPosts(startTime: Date, endTime: Date) {
+    try {
+      const { data: postsToPublish, error } = await this.supabaseService.client
+        .from('social_posts')
+        .select(`
+          *,
+          post_approvals (status),
+          social_connections!inner (posting_mode)
+        `)
+        .eq('status', 'scheduled')
+        .gte('scheduled_for', startTime.toISOString())
+        .lt('scheduled_for', endTime.toISOString())
+        .or(
+          `and(post_approvals.status.eq.approved),
+           and(social_connections.posting_mode.eq.automatic,post_approvals.status.is.null)`
+        );
+
+      if (error) throw error;
+
+      // Process each post
+      for (const post of postsToPublish) {
+        try {
+          await this.twitterPostService.publishPost({
+            postId: post.id,
+            content: post.content,
+            format: post.metadata?.format || 'normal'
+          });
+        } catch (error) {
+          // Update post status to failed
+          await this.supabaseService.client
+            .from('social_posts')
+            .update({
+              status: 'failed',
+              error_message: error.message
+            })
+            .eq('id', post.id);
+          
+          this.logger.error(`Failed to publish post ${post.id}:`, error);
+          continue;
+        }
+      }
+
+      return postsToPublish;
+    } catch (error) {
+      this.logger.error('Failed to publish scheduled posts:', error);
+      throw error;
+    }
+  }
+
+  async getAgentsWithTwitterConnections() {
+    try {
+      const { data: agents, error } = await this.supabaseService.client
+        .from('social_connections')
+        .select(`
+          id,
+          platform_user_id,
+          agent_id,
+          user_id,
+          auth,
+          user_agents!inner (*)
+        `)
+        .eq('platform', 'twitter')
+        .eq('posting_mode', 'automatic');
+
+      if (error) throw error;
+      return agents;
+    } catch (error) {
+      this.logger.error('Failed to get agents with Twitter connections:', error);
+      throw error;
+    }
+  }
+
+  async calculateEngagementMetrics(tweets: any[]) {
+    try {
+      const metrics = {
+        likes: 0,
+        retweets: 0,
+        replies: 0,
+        impressions: 0,
+        engagement_rate: 0
+      };
+
+      if (!tweets || tweets.length === 0) {
+        return metrics;
+      }
+
+      // Calculate total metrics
+      tweets.forEach(tweet => {
+        if (tweet.engagement) {
+          metrics.likes += tweet.engagement.like_count || 0;
+          metrics.retweets += tweet.engagement.retweet_count || 0;
+          metrics.replies += tweet.engagement.reply_count || 0;
+          metrics.impressions += tweet.engagement.impression_count || 0;
+        }
+      });
+
+      // Calculate engagement rate
+      const totalEngagements = metrics.likes + metrics.retweets + metrics.replies;
+      metrics.engagement_rate = metrics.impressions > 0 
+        ? (totalEngagements / metrics.impressions) * 100 
+        : 0;
+
+      return metrics;
+    } catch (error) {
+      this.logger.error('Error calculating engagement metrics:', error);
+      throw error;
+    }
+  }
+
+  async analyzeContentTrends(tweets: any[]) {
+    try {
+      if (!tweets || tweets.length === 0) {
+        return {
+          topHashtags: [],
+          topMentions: [],
+          popularityByHour: {},
+          engagementTrends: {
+            daily: [],
+            weekly: []
+          }
+        };
+      }
+
+      // Extract hashtags and mentions
+      const hashtags = new Map();
+      const mentions = new Map();
+      const hourlyDistribution = new Map();
+      const dailyEngagement = new Map();
+
+      tweets.forEach(tweet => {
+        // Process hashtags
+        tweet.metadata?.entities?.hashtags?.forEach(tag => {
+          hashtags.set(tag.tag, (hashtags.get(tag.tag) || 0) + 1);
+        });
+
+        // Process mentions
+        tweet.metadata?.entities?.mentions?.forEach(mention => {
+          mentions.set(mention.username, (mentions.get(mention.username) || 0) + 1);
+        });
+
+        // Process posting time distribution
+        const tweetDate = new Date(tweet.created_at);
+        const hour = tweetDate.getHours();
+        hourlyDistribution.set(hour, (hourlyDistribution.get(hour) || 0) + 1);
+
+        // Process daily engagement
+        const dateKey = tweetDate.toISOString().split('T')[0];
+        const engagement = tweet.engagement 
+          ? (tweet.engagement.like_count || 0) + 
+            (tweet.engagement.retweet_count || 0) + 
+            (tweet.engagement.reply_count || 0)
+          : 0;
+        
+        dailyEngagement.set(dateKey, (dailyEngagement.get(dateKey) || 0) + engagement);
+      });
+
+      // Sort and format results
+      const topHashtags = Array.from(hashtags.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([tag, count]) => ({ tag, count }));
+
+      const topMentions = Array.from(mentions.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([username, count]) => ({ username, count }));
+
+      const popularityByHour = Object.fromEntries(
+        Array.from(hourlyDistribution.entries()).sort((a, b) => a[0] - b[0])
+      );
+
+      const engagementTrends = {
+        daily: Array.from(dailyEngagement.entries())
+          .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+          .slice(0, 7)
+          .map(([date, count]) => ({ date, count })),
+        weekly: this.calculateWeeklyTrends(dailyEngagement)
+      };
+
+      return {
+        topHashtags,
+        topMentions,
+        popularityByHour,
+        engagementTrends
+      };
+    } catch (error) {
+      this.logger.error('Error analyzing content trends:', error);
+      throw error;
+    }
+  }
+
+  private calculateWeeklyTrends(dailyEngagement: Map<string, number>) {
+    const weeklyData = new Map();
+    
+    Array.from(dailyEngagement.entries()).forEach(([dateStr, count]) => {
+      const date = new Date(dateStr);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      weeklyData.set(weekKey, (weeklyData.get(weekKey) || 0) + count);
+    });
+
+    return Array.from(weeklyData.entries())
+      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+      .slice(0, 4)
+      .map(([week, count]) => ({ week, count }));
+  }
 } 

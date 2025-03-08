@@ -275,4 +275,113 @@ export class UserAgentService {
     - Industry context and standards
     - Platform-specific best practices`;
   }
+
+  async getAgentsWithWebsites() {
+    try {
+      // Get agents with website URLs and their latest scrape info
+      const { data: agents, error } = await this.supabase
+        .from('user_agents')
+        .select(`
+          id,
+          website_url,
+          letta_agent_id,
+          agent_website_sources (
+            id,
+            website_id,
+            website_content (
+              created_at,
+              content_type,
+              content
+            )
+          )
+        `)
+        .not('website_url', 'is', null);
+
+      if (error) throw error;
+
+      // Filter agents that need scraping (no source or last scrape > 24h ago)
+      const agentsNeedingScrape = agents.filter(agent => {
+        // If no website sources, needs scraping
+        if (!agent.agent_website_sources?.length) return true;
+
+        // Get latest content timestamp
+        const latestContent = agent.agent_website_sources
+          .flatMap(source => source.website_content)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+
+        // If no content or content older than 24h, needs scraping
+        if (!latestContent) return true;
+        const lastScrapeTime = new Date(latestContent.created_at).getTime();
+        const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
+        
+        return lastScrapeTime < twentyFourHoursAgo;
+      });
+
+      return { data: agentsNeedingScrape, error: null };
+    } catch (error) {
+      this.logger.error('Failed to get agents with websites:', error);
+      throw error;
+    }
+  }
+
+  async createWebsiteSource(agentId: string, websiteUrl: string) {
+    try {
+      // First create website source
+      const { data: websiteSource, error: sourceError } = await this.supabase
+        .from('website_sources')
+        .insert({ url: websiteUrl })
+        .select()
+        .single();
+
+      if (sourceError) throw sourceError;
+
+      // Create agent-website association
+      const { error: linkError } = await this.supabase
+        .from('agent_website_sources')
+        .insert({
+          agent_id: agentId,
+          website_id: websiteSource.id
+        });
+
+      if (linkError) throw linkError;
+
+      return websiteSource;
+    } catch (error) {
+      this.logger.error('Failed to create website source:', error);
+      throw error;
+    }
+  }
+
+  async updateWebsiteContent(websiteId: string, scrapedData: any) {
+    try {
+      // Store different types of content separately
+      const contentEntries = [
+        {
+          website_id: websiteId,
+          content_type: 'metadata',
+          content: JSON.stringify({
+            title: scrapedData.title,
+            description: scrapedData.description,
+            keywords: scrapedData.keywords
+          }),
+          metadata: { type: 'page_metadata' }
+        },
+        {
+          website_id: websiteId,
+          content_type: 'text',
+          content: scrapedData.mainContent,
+          metadata: { type: 'main_content' }
+        }
+      ];
+
+      const { error } = await this.supabase
+        .from('website_content')
+        .insert(contentEntries);
+
+      if (error) throw error;
+    } catch (error) {
+      this.logger.error('Failed to update website content:', error);
+      throw error;
+    }
+  }
 } 

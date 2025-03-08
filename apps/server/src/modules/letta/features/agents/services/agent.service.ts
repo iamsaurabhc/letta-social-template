@@ -690,4 +690,26 @@ export class AgentService extends BaseService {
       throw error;
     }
   }
+
+  async updateAgentMemory(agentId: string, data: { type: string, data: any }) {
+    try {
+      const { error } = await this.supabaseClient
+        .from('agent_memory')
+        .upsert({
+          agent_id: agentId,
+          type: data.type,
+          data: data.data,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'agent_id,type'
+        });
+
+      if (error) throw error;
+
+      this.logger.debug(`Updated memory for agent ${agentId} with type ${data.type}`);
+    } catch (error) {
+      this.logger.error(`Failed to update agent memory for ${agentId}:`, error);
+      throw error;
+    }
+  }
 } 

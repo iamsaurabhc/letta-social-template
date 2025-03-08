@@ -1,13 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TwitterApiService } from '../../../services/twitter-api.service';
 import { TwitterAuth, TwitterResponse, Tweet, TwitterMediaUploadResponse } from '../../../interfaces/twitter.interface';
+import { SupabaseService } from '@/supabase/supabase.service';
+import { TwitterClient } from '../../../twitter.client';
+
+interface PublishPostParams {
+  postId: string;
+  content: string;
+  format: 'normal' | 'long_form';
+}
 
 @Injectable()
 export class TwitterPostService {
   private readonly logger = new Logger(TwitterPostService.name);
   private readonly TWITTER_UPLOAD_API_BASE = 'https://upload.twitter.com/1.1';
 
-  constructor(private readonly twitterApiService: TwitterApiService) {}
+  constructor(
+    private readonly twitterApiService: TwitterApiService,
+    private readonly supabaseService: SupabaseService,
+    private readonly twitterClient: TwitterClient
+  ) {}
 
   /**
    * Retrieves tweets for the authenticated user
@@ -177,5 +189,66 @@ export class TwitterPostService {
       auth
     );
     return response.data.id;
+  }
+
+  async publishPost({ postId, content, format }: PublishPostParams) {
+    try {
+      // Get post details including connection info
+      const { data: post, error: postError } = await this.supabaseService.client
+        .from('social_posts')
+        .select(`
+          *,
+          social_connections!inner (
+            auth,
+            platform_user_id
+          )
+        `)
+        .eq('id', postId)
+        .single();
+
+      if (postError || !post) {
+        throw new Error('Failed to fetch post details');
+      }
+
+      // Post to Twitter
+      const tweetResponse = await this.twitterClient.tweet({
+        text: content,
+        auth: post.social_connections.auth,
+        userId: post.social_connections.platform_user_id
+      });
+
+      // Update post status
+      const { error: updateError } = await this.supabaseService.client
+        .from('social_posts')
+        .update({
+          status: 'published',
+          published_at: new Date().toISOString(),
+          platform_post_id: tweetResponse.id,
+          metadata: {
+            ...post.metadata,
+            tweet_url: tweetResponse.url
+          }
+        })
+        .eq('id', postId);
+
+      if (updateError) {
+        throw new Error('Failed to update post status');
+      }
+
+      return tweetResponse;
+    } catch (error) {
+      this.logger.error(`Failed to publish post ${postId}:`, error);
+      
+      // Update post status to failed
+      await this.supabaseService.client
+        .from('social_posts')
+        .update({
+          status: 'failed',
+          error_message: error.message
+        })
+        .eq('id', postId);
+
+      throw error;
+    }
   }
 } 

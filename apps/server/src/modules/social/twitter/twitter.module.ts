@@ -10,6 +10,7 @@ import { SupabaseModule } from '../../../supabase/supabase.module';
 import { TwitterAuthService } from './services/auth.service';
 import { LettaModule } from '../../letta/letta.module';
 import { BullQueueModule } from '../../bull/bull.module';
+import { TwitterClient } from './twitter.client';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { BullQueueModule } from '../../bull/bull.module';
     TwitterEngagementService,
     TwitterProfileService,
     TwitterApiService,
-    TwitterAuthService
+    TwitterAuthService,
+    TwitterClient
   ],
   exports: [
     TwitterPostService,
