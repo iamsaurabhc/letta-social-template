@@ -7,7 +7,7 @@
         "providers": ["node"],
         "phases": {
           "setup": {
-            "nixPkgs": ["redis", "nodejs"]
+            "nixPkgs": ["redis", "node"]
           },
           "install": {
             "dependsOn": ["setup"],
@@ -23,7 +23,7 @@
             "dependsOn": ["install"],
             "cmds": [
               "cd apps/server",
-              "pnpm build"
+              "NODE_OPTIONS='--max-old-space-size=4096' pnpm build"
             ]
           }
         }

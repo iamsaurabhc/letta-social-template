@@ -12,11 +12,26 @@ let app;
 // Optimize bootstrap for faster cold starts
 async function bootstrap() {
   if (!app) {
+    // Set max memory limit
+    const memoryLimit = process.env.NODE_ENV === 'production' ? 4096 : 2048;
+    process.env.NODE_OPTIONS = `--max-old-space-size=${memoryLimit}`;
+
     app = await NestFactory.create(AppModule, {
       logger: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['error', 'warn', 'log', 'debug'],
-      bufferLogs: true, // Buffer logs for better performance
+      bufferLogs: true,
     });
     
+    // Enable GC
+    if (global.gc) {
+      setInterval(() => {
+        try {
+          global.gc();
+        } catch (e) {
+          console.error('Failed to run garbage collection:', e);
+        }
+      }, 30000); // Run GC every 30 seconds
+    }
+
     app.useGlobalPipes(new ValidationPipe({
       transform: true,
       whitelist: true,
