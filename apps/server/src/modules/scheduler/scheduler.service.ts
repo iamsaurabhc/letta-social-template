@@ -24,18 +24,36 @@ export class SchedulerService {
     timeZone: 'UTC'
   })
   async handlePostGeneration() {
+    this.logger.log('Starting daily post generation job');
     try {
       const activeAgents = await this.postService.getActiveAgentsForPosting();
+      this.logger.log(`Found ${activeAgents.length} active agents for posting`);
+
       for (const agent of activeAgents) {
         try {
+          this.logger.log(`Generating post for agent ${agent.id} (${agent.name || 'unnamed'})`);
           await this.agentService.generateAndSchedulePost(agent.id);
+          this.logger.log(`Successfully generated post for agent ${agent.id}`);
         } catch (error) {
-          this.logger.error(`Failed to generate post for agent ${agent.id}:`, error);
+          this.logger.error(`Failed to generate post for agent ${agent.id}:`, {
+            error: error.message,
+            stack: error.stack,
+            agentDetails: {
+              id: agent.id,
+              name: agent.name,
+              settings: agent.platform_settings
+            }
+          });
           continue;
         }
       }
+      this.logger.log('Completed daily post generation job');
     } catch (error) {
-      this.logger.error('Failed to generate posts:', error);
+      this.logger.error('Failed to generate posts:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -45,12 +63,31 @@ export class SchedulerService {
     timeZone: 'UTC'
   })
   async handleTwitterPosting() {
+    this.logger.log('Starting Twitter posting job');
     try {
       const now = new Date();
       const fifteenMinsFromNow = new Date(now.getTime() + 15 * 60000);
-      await this.postService.publishScheduledPosts(now, fifteenMinsFromNow);
+      
+      this.logger.log(`Publishing posts scheduled between ${now.toISOString()} and ${fifteenMinsFromNow.toISOString()}`);
+      
+      const publishedPosts = await this.postService.publishScheduledPosts(now, fifteenMinsFromNow);
+      this.logger.log(`Successfully published ${publishedPosts.length} posts`);
+      
+      // Log details of published posts
+      publishedPosts.forEach(post => {
+        this.logger.debug(`Published post details:`, {
+          postId: post.id,
+          agentId: post.agent_id,
+          scheduledFor: post.scheduled_for,
+          platform: post.platform
+        });
+      });
     } catch (error) {
-      this.logger.error('Failed to publish scheduled posts:', error);
+      this.logger.error('Failed to publish scheduled posts:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -60,22 +97,30 @@ export class SchedulerService {
     timeZone: 'UTC'
   })
   async handleEngagementMonitoring() {
+    this.logger.log('Starting hourly engagement monitoring');
     try {
       const agents = await this.postService.getAgentsWithTwitterConnections();
+      this.logger.log(`Found ${agents.length} agents with Twitter connections`);
       
       for (const agent of agents) {
         try {
-          // Fetch timeline and engagement metrics
+          this.logger.log(`Processing engagement for agent ${agent.id}`, {
+            platformUserId: agent.platform_user_id,
+            agentId: agent.agent_id
+          });
+
           const tweets = await this.twitterProfileService.fetchAndStoreTimeline(
             agent.auth,
             agent.platform_user_id,
             agent.agent_id
           );
+          this.logger.log(`Fetched ${tweets.length} tweets for agent ${agent.id}`);
 
-          // Calculate engagement metrics
           const engagementMetrics = await this.postService.calculateEngagementMetrics(tweets);
-          
-          // Update agent memory with both timeline and metrics
+          this.logger.log(`Calculated engagement metrics for agent ${agent.id}`, {
+            metrics: engagementMetrics
+          });
+
           await this.agentService.updateAgentMemory(agent.agent_id, {
             type: 'twitter_engagement',
             data: {
@@ -84,13 +129,26 @@ export class SchedulerService {
               timestamp: new Date().toISOString()
             }
           });
+          this.logger.log(`Updated engagement memory for agent ${agent.id}`);
         } catch (error) {
-          this.logger.error(`Failed to process agent ${agent.id}:`, error);
+          this.logger.error(`Failed to process agent ${agent.id}:`, {
+            error: error.message,
+            stack: error.stack,
+            agentDetails: {
+              id: agent.id,
+              platformUserId: agent.platform_user_id,
+              agentId: agent.agent_id
+            }
+          });
           continue;
         }
       }
     } catch (error) {
-      this.logger.error('Failed to monitor engagement:', error);
+      this.logger.error('Failed to monitor engagement:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -100,12 +158,18 @@ export class SchedulerService {
     timeZone: 'UTC'
   })
   async handleWebsiteScraping() {
+    this.logger.log('Starting website scraping job');
     try {
       const { data: agents } = await this.userAgentService.getAgentsWithWebsites();
+      this.logger.log(`Found ${agents.length} agents with websites to scrape`);
       
       for (const agent of agents) {
         try {
-          // Create website source if doesn't exist
+          this.logger.log(`Processing website for agent ${agent.id}`, {
+            websiteUrl: agent.website_url,
+            lettaAgentId: agent.letta_agent_id
+          });
+
           let websiteSource = agent.agent_website_sources?.[0]?.website_id;
           if (!websiteSource) {
             const source = await this.userAgentService.createWebsiteSource(
@@ -113,27 +177,42 @@ export class SchedulerService {
               agent.website_url
             );
             websiteSource = source.id;
+            this.logger.log(`Created new website source for agent ${agent.id}`, {
+              sourceId: source.id
+            });
           }
 
-          // Scrape website
           const scrapedData = await this.scraperService.scrapeWebsite(agent.website_url);
-          
-          // Update website content
+          this.logger.log(`Successfully scraped website for agent ${agent.id}`, {
+            dataLength: JSON.stringify(scrapedData).length
+          });
+
           await this.userAgentService.updateWebsiteContent(websiteSource, scrapedData);
-          
-          // Update agent memory
           await this.userAgentService.updateAgentWithScrapedData(
             agent.id,
             scrapedData,
             agent.letta_agent_id
           );
+          this.logger.log(`Updated agent ${agent.id} with scraped data`);
         } catch (error) {
-          this.logger.error(`Failed to scrape website for agent ${agent.id}:`, error);
+          this.logger.error(`Failed to scrape website for agent ${agent.id}:`, {
+            error: error.message,
+            stack: error.stack,
+            agentDetails: {
+              id: agent.id,
+              websiteUrl: agent.website_url,
+              lettaAgentId: agent.letta_agent_id
+            }
+          });
           continue;
         }
       }
     } catch (error) {
-      this.logger.error('Failed to process website scraping:', error);
+      this.logger.error('Failed to process website scraping:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
@@ -143,22 +222,32 @@ export class SchedulerService {
     timeZone: 'UTC'
   })
   async handleTwitterTimeline() {
+    this.logger.log('Starting Twitter timeline analysis job');
     try {
       const agents = await this.postService.getAgentsWithTwitterConnections();
+      this.logger.log(`Found ${agents.length} agents for timeline analysis`);
       
       for (const agent of agents) {
         try {
-          // Fetch extended timeline (more posts than hourly check)
+          this.logger.log(`Analyzing timeline for agent ${agent.id}`, {
+            platformUserId: agent.platform_user_id,
+            agentId: agent.agent_id
+          });
+
           const tweets = await this.twitterProfileService.fetchAndStoreTimeline(
             agent.auth,
             agent.platform_user_id,
-            agent.agent_id,
+            agent.agent_id
           );
+          this.logger.log(`Fetched ${tweets.length} tweets for analysis`, {
+            agentId: agent.id
+          });
 
-          // Perform trend analysis
           const trends = await this.postService.analyzeContentTrends(tweets);
-          
-          // Update agent memory with analysis
+          this.logger.log(`Analyzed content trends for agent ${agent.id}`, {
+            trendCount: Object.keys(trends).length
+          });
+
           await this.agentService.updateAgentMemory(agent.agent_id, {
             type: 'twitter_content_analysis',
             data: {
@@ -166,13 +255,26 @@ export class SchedulerService {
               analyzedAt: new Date().toISOString()
             }
           });
+          this.logger.log(`Updated content analysis memory for agent ${agent.id}`);
         } catch (error) {
-          this.logger.error(`Failed to analyze timeline for agent ${agent.id}:`, error);
+          this.logger.error(`Failed to analyze timeline for agent ${agent.id}:`, {
+            error: error.message,
+            stack: error.stack,
+            agentDetails: {
+              id: agent.id,
+              platformUserId: agent.platform_user_id,
+              agentId: agent.agent_id
+            }
+          });
           continue;
         }
       }
     } catch (error) {
-      this.logger.error('Failed to analyze Twitter timelines:', error);
+      this.logger.error('Failed to analyze Twitter timelines:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 } 
