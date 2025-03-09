@@ -5,7 +5,6 @@ import { LettaModule } from './modules/letta/letta.module';
 import { SocialModule } from './modules/social/social.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AppController } from './app.controller';
-import { BullModule } from '@nestjs/bull';
 import { SupabaseConnectionPool } from './supabase/connection-pool.service';
 import { CacheModule } from './modules/cache/cache.module';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -42,27 +41,6 @@ import { SchedulerModule } from './modules/scheduler/scheduler.module';
     LettaModule,
     SocialModule,
     SupabaseModule,
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST'),
-          port: configService.get('REDIS_PORT'),
-          password: configService.get('REDIS_PASSWORD'),
-          tls: configService.get('REDIS_TLS') ? {} : undefined
-        },
-        defaultJobOptions: {
-          removeOnComplete: true,
-          removeOnFail: true,
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 1000
-          }
-        }
-      }),
-      inject: [ConfigService],
-    })
   ],
   controllers: [AppController],
 })

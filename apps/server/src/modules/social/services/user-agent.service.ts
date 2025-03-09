@@ -64,24 +64,15 @@ export class UserAgentService {
       if (existingAgent) {
         this.logger.log('Agent already exists, using existing agent:', existingAgent.id);
         
-        // Make scraping non-blocking
+        // Website scraping is now handled by the scheduler service
         if (data.websiteUrl) {
-          this.logger.log('Queueing website scraping for existing agent...');
-          this.websiteScraperService.queueWebsiteScraping(
-            existingAgent.id,
-            data.websiteUrl,
-            existingAgent.letta_agent_id
-          ).catch(error => {
-            this.logger.error('Failed to queue website scraping:', error);
-          });
+          this.logger.log('Website scraping will be handled by the scheduler service');
         }
         
         return existingAgent;
       }
 
       // Continue with normal creation flow if agent doesn't exist
-      this.logger.log('Starting user agent creation process');
-      
       this.logger.debug('Input data:', data);
 
       // 1. Create Letta agent
@@ -149,14 +140,9 @@ export class UserAgentService {
         throw error;
       }
 
-      // 5. Queue website scraping if URL provided
+      // Website scraping is now handled by the scheduler service
       if (data.websiteUrl) {
-        this.logger.log('Queueing website scraping...');
-        await this.websiteScraperService.queueWebsiteScraping(
-          agent.id,
-          data.websiteUrl,
-          lettaAgent.id
-        );
+        this.logger.log('Website scraping will be handled by the scheduler service');
       }
 
       return agent;

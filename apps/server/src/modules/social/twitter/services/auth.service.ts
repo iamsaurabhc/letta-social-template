@@ -5,7 +5,6 @@ import OAuth from 'oauth-1.0a';
 import { createHmac } from 'crypto';
 import { SupabaseService } from '../../../../supabase/supabase.service';
 import * as crypto from 'crypto';
-import { BullQueueService } from '../../../bull/bull-queue.service';
 
 @Injectable()
 export class TwitterAuthService {
@@ -16,7 +15,6 @@ export class TwitterAuthService {
     private readonly configService: ConfigService,
     private readonly twitterApiService: TwitterApiService,
     private readonly supabaseService: SupabaseService,
-    private readonly queueService: BullQueueService,
   ) {
     const consumerKey = this.configService.get('TWITTER_CONSUMER_KEY');
     const consumerSecret = this.configService.get('TWITTER_CONSUMER_SECRET');
@@ -139,18 +137,6 @@ export class TwitterAuthService {
           token_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           platform_settings: {}
         });
-
-      // Add timeline fetch job to queue
-      await this.queueService.addToQueue('twitter-timeline', 'fetch', {
-        userId: userId,
-        agentId: agentId,
-        auth: {
-          accessToken,
-          refreshToken,
-          userId: username,
-          expiresAt: 0
-        }
-      });
 
       const clientUrl = this.configService.get('CLIENT_URL');
       const twitterData = {

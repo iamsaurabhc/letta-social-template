@@ -7,7 +7,6 @@ import { CreateArchivalMemoryDto } from '../dto/archival-memory.dto';
 import { ModifyBlockDto } from '../dto/core-memory.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { TriggersDto, TriggerSettingsDto } from '../../../../social/dto/trigger.dto';
-import { BullQueueService } from '../../../../bull/bull-queue.service';
 import { AssistantMessage } from '@letta-ai/letta-client/api';
 import { PostService } from '@/modules/social/posts/services/post.service';
 
@@ -18,7 +17,6 @@ export class AgentService extends BaseService {
 
   constructor(
     configService: ConfigService,
-    private readonly queueService: BullQueueService,
     @Inject(forwardRef(() => PostService))
     private readonly postService: PostService
   ) {
@@ -313,14 +311,10 @@ export class AgentService extends BaseService {
         }
       }
   
-      // Schedule engagement monitoring if enabled
+      // Log engagement monitoring settings - actual monitoring is handled by SchedulerService
       if (triggers.engagement?.enabled) {
-        try {
-          await this.scheduleEngagementMonitoring(agentId, triggers.engagement);
-          this.logger.log(`Engagement monitoring scheduled for agent ${agentId}`);
-        } catch (error) {
-          this.logger.error(`Failed to schedule engagement monitoring: ${error.message}`);
-        }
+        this.logger.log(`Engagement monitoring enabled for agent ${agentId}`);
+        // No need to schedule here as it's handled by @Cron in SchedulerService
       }
     } catch (error) {
       this.logger.error(`Error in scheduleAutomationJobs: ${error.message}`);
@@ -330,45 +324,22 @@ export class AgentService extends BaseService {
 
   private async scheduleContentGeneration(agentId: string, settings: any) {
     try {
-      const jobData = {
-        agentId,
-        settings,
-        type: 'content_generation'
-      };
-  
       // Validate the frequency and settings
       if (settings.frequency === 'custom' && settings.customSchedule && 
           settings.customSchedule.days && settings.customSchedule.days.length > 0 && 
           settings.customSchedule.time) {
         // Schedule for specific days and times
-        this.logger.log(`Scheduling custom content generation for agent ${agentId}`);
-        await this.queueService.scheduleCustom('content-generation', jobData, {
-          days: settings.customSchedule.days,
-          time: settings.customSchedule.time,
-          postsPerPeriod: settings.postsPerPeriod || 5 // Default to 5 if not specified
-        });
+        this.logger.log(`Custom content generation configured for agent ${agentId}`);
       } else {
         // Use the specified frequency or default to daily
         const frequency = ['daily', 'weekly'].includes(settings.frequency) ? settings.frequency : 'daily';
-        this.logger.log(`Scheduling ${frequency} content generation for agent ${agentId}`);
-        await this.queueService.scheduleRecurring('content-generation', jobData, frequency, settings.postsPerPeriod || 5);
+        this.logger.log(`${frequency} content generation configured for agent ${agentId}`);
       }
       return true;
     } catch (error) {
       this.logger.error(`Error in scheduleContentGeneration: ${error.message}`);
       throw error;
     }
-  }
-
-  private async scheduleEngagementMonitoring(agentId: string, settings: any) {
-    const jobData = {
-      agentId,
-      settings,
-      type: 'engagement_monitoring'
-    };
-
-    // Engagement monitoring runs more frequently
-    await this.queueService.scheduleRecurring('engagement-monitoring', jobData, 'hourly');
   }
 
   private sanitizePromptData(data: any): string {
