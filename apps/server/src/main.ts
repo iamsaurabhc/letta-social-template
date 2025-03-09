@@ -59,7 +59,7 @@ async function bootstrap() {
 
     // Start listening if in local development
     if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-      const port = process.env.PORT || 3001;
+      const port = process.env.PORT || 8080;
       await app.listen(port);
       logger.log(`Server listening on port ${port}`);
     }

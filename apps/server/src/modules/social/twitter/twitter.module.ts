@@ -34,7 +34,8 @@ import { TwitterClient } from './twitter.client';
     TwitterEngagementService,
     TwitterProfileService,
     TwitterApiService,
-    TwitterAuthService
+    TwitterAuthService,
+    TwitterClient
   ]
 })
 export class TwitterModule {} 
