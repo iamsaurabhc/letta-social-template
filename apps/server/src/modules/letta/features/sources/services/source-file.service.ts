@@ -2,8 +2,9 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream } from 'fs';
 import { ReadStream } from 'fs';
-import { BaseService } from '../../../services/base.service';
 import { LettaError } from '@letta-ai/letta-client';
+import { Express } from 'express';
+import { BaseService } from '../../../services/base.service';
 
 @Injectable()
 export class SourceFileService extends BaseService {

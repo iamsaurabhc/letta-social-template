@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
 import { TwitterPostService } from '../services/post.service';
 import { JwtAuthGuard } from '../../../../../../auth/guards/jwt.guard';
 

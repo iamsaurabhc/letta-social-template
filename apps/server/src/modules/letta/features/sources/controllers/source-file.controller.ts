@@ -2,6 +2,7 @@ import { Controller, Get, Post, Delete, Param, UseGuards, UploadedFile, UseInter
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SourceFileService } from '../services/source-file.service';
 import { JwtAuthGuard } from '../../../../../auth/guards/jwt.guard';
+import { Express } from 'express';
 
 @Controller('letta/sources')
 @UseGuards(JwtAuthGuard)
