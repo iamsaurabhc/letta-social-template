@@ -364,7 +364,8 @@ export class PostService {
           platform_user_id,
           agent_id,
           user_id,
-          auth,
+          access_token,
+          refresh_token,
           user_agents!inner (*)
         `)
         .eq('platform', 'twitter')
