@@ -184,64 +184,74 @@ export function AgentDetailCard({ agent, triggerDetails, postingMode }: AgentDet
     <>
       <Card 
         className={cn(
-          "hover:shadow-md transition-all cursor-pointer relative overflow-hidden",
-          "border-opacity-60 hover:border-opacity-100",
-          "bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-950 dark:to-slate-900/80"
+          "relative overflow-hidden transition-all duration-200",
+          "hover:shadow-lg hover:border-primary/20",
+          "bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-950 dark:to-gray-900/50"
         )}
         onClick={() => setIsModalOpen(true)}
       >
         {/* Status indicator */}
-        <div className="absolute top-4 right-4 flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Online</span>
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Active</span>
+          </div>
         </div>
 
-        <CardHeader>
-          <div className="flex justify-between items-start pr-20">
-            <div>
-              <CardTitle>{agent.name}</CardTitle>
-              {/* <CardDescription className="line-clamp-2">{agent.description || "No description"}</CardDescription> */}
-            </div>
+        <CardHeader className="pb-4">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold">{agent.name}</CardTitle>
+            <CardDescription className="line-clamp-2 text-sm">
+              {agent.description || "AI-powered social media management"}
+            </CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="mb-4">
-              <Button 
-                onClick={handleGeneratePost}
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2"
-                disabled={isGeneratingPost}
-              >
-                {isGeneratingPost ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900" />
-                ) : (
+
+        <CardContent className="space-y-6">
+          <div className="flex flex-col gap-4">
+            <Button 
+              onClick={handleGeneratePost}
+              className={cn(
+                "w-full relative overflow-hidden",
+                "bg-gradient-to-r from-blue-500 to-indigo-500",
+                "text-white hover:opacity-90 transition-opacity"
+              )}
+              disabled={isGeneratingPost}
+            >
+              {isGeneratingPost ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
+                  <span>Generating...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                )}
-                {isGeneratingPost ? "Generating..." : "Generate New Post"}
-              </Button>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="h-4 w-4 text-amber-500" />
-                <h4 className="text-sm font-medium">Automation Summary</h4>
-              </div>
-              <p className="text-sm text-muted-foreground">{formatTriggerSummary()}</p>
-              
+                  <span>Generate New Post</span>
+                </div>
+              )}
+            </Button>
+
+            <div className="space-y-4 pt-2">
               {renderTriggerCategories()}
             </div>
-            
-            <div className="flex justify-between items-center">
+          </div>
+
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-medium">Posting Mode</span>
+              </div>
               <Badge 
                 variant={postingMode === 'automatic' ? 'destructive' : 'outline'} 
                 className={cn(
                   "px-2.5 py-1 text-xs font-medium",
                   postingMode === 'automatic' 
-                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" 
-                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300" 
+                    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                 )}
               >
-                {postingMode === 'automatic' ? 'Fully Automatic' : 'Manual Approval'}
+                {postingMode === 'automatic' ? 'Automatic' : 'Manual Approval'}
               </Badge>
             </div>
           </div>

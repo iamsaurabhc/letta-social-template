@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import api from "@/utils/api";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface AgentScheduledPost {
   id: string;
@@ -49,68 +51,76 @@ export function AgentScheduledPosts({ agentId }: AgentScheduledPostsProps) {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Upcoming Posts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-24">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900" />
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-24 bg-gray-100 dark:bg-gray-800 rounded-lg" />
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     );
   }
 
   if (posts.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Upcoming Posts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No upcoming posts
+      <div className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-4 border-2 border-dashed rounded-xl">
+        <Calendar className="h-12 w-12 text-muted-foreground/50" />
+        <div>
+          <p className="text-sm font-medium">No upcoming posts</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Generate new content to schedule posts
           </p>
-        </CardContent>
-      </Card>
+        </div>
+        <Button variant="outline" size="sm">
+          Create Post
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">Upcoming Posts</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {posts.map((post, index) => (
-            <div key={post.id}>
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {format(new Date(post.scheduled_for), 'MMM d, yyyy')}
-                  </span>
-                  <Clock className="h-3 w-3 text-muted-foreground ml-1" />
-                  <span className="text-muted-foreground">
-                    {format(new Date(post.scheduled_for), 'h:mm a')}
-                  </span>
+    <div className="space-y-4">
+      {posts.map((post, index) => (
+        <div
+          key={post.id}
+          className={cn(
+            "group relative p-4 rounded-xl transition-all duration-200",
+            "hover:bg-gray-50 dark:hover:bg-gray-800/50",
+            "border border-gray-100 dark:border-gray-800"
+          )}
+        >
+          <div className="flex flex-col space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>{format(new Date(post.scheduled_for), 'MMM d, yyyy')}</span>
                 </div>
-                <p className="text-sm line-clamp-2">{post.content}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                    @{post.social_connections.username}
-                  </span>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{format(new Date(post.scheduled_for), 'h:mm a')}</span>
                 </div>
               </div>
-              {index < posts.length - 1 && (
-                <Separator className="my-3" />
-              )}
+              <ChevronRight className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-          ))}
+            
+            <p className="text-sm leading-relaxed line-clamp-2">{post.content}</p>
+            
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "text-xs px-2 py-1 rounded-full font-medium",
+                "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+                "border border-blue-100 dark:border-blue-800"
+              )}>
+                @{post.social_connections.username}
+              </span>
+              <span className="text-xs text-muted-foreground capitalize">
+                {post.social_connections.platform}
+              </span>
+            </div>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   );
 }
