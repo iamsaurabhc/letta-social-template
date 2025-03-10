@@ -1,9 +1,11 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '../types/supabase';
 
-export const createSupabaseClient = () => {
+export const createSupabaseClient = (): SupabaseClient<Database> => {
   // Return dummy client during SSR/build
   if (typeof window === 'undefined') {
-    return {} as ReturnType<typeof createBrowserClient>;
+    return {} as SupabaseClient<Database>;
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,5 +15,5 @@ export const createSupabaseClient = () => {
     throw new Error('Missing Supabase credentials');
   }
 
-  return createBrowserClient(supabaseUrl, supabaseKey);
-}; 
+  return createBrowserClient<Database>(supabaseUrl, supabaseKey);
+};
