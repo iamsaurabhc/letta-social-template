@@ -154,8 +154,7 @@ export class PostService {
         const auth: TwitterAuth = {
           accessToken: connection.access_token,
           refreshToken: connection.refresh_token,
-          expiresAt: 0, // Twitter tokens don't expire
-          userId: post.social_connections[0].user_id
+          userId: connection.user_id
         };
 
         // Post to Twitter

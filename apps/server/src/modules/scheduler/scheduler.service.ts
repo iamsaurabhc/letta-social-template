@@ -5,6 +5,7 @@ import { AgentService } from '../letta/features/agents/services/agent.service';
 import { TwitterProfileService } from '../social/twitter/features/profile/services/profile.service';
 import { WebsiteScraperService } from '../social/services/website-scraper.service';
 import { UserAgentService } from '../social/services/user-agent.service';
+import { TwitterAuth } from '../social/twitter/interfaces/twitter.interface';
 
 @Injectable()
 export class SchedulerService {
@@ -109,8 +110,14 @@ export class SchedulerService {
             agentId: agent.agent_id
           });
 
+          const auth: TwitterAuth = {
+            accessToken: agent.access_token,
+            refreshToken: agent.refresh_token,
+            userId: agent.user_id
+          };
+
           const tweets = await this.twitterProfileService.fetchAndStoreTimeline(
-            agent.auth,
+            auth,
             agent.platform_user_id,
             agent.agent_id
           );
@@ -234,8 +241,14 @@ export class SchedulerService {
             agentId: agent.agent_id
           });
 
+          const auth: TwitterAuth = {
+            accessToken: agent.access_token,
+            refreshToken: agent.refresh_token,
+            userId: agent.user_id
+          };
+
           const tweets = await this.twitterProfileService.fetchAndStoreTimeline(
-            agent.auth,
+            auth,
             agent.platform_user_id,
             agent.agent_id
           );

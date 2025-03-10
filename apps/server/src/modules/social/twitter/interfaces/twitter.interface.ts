@@ -7,7 +7,6 @@ export interface BaseEntity {
 export interface TwitterAuth {
   accessToken: string;
   refreshToken: string;
-  expiresAt: number;
   userId: string;
 }
 
