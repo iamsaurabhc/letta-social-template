@@ -13,6 +13,8 @@ out
 .env.*
 !.env.example
 
+cloudformation.yml
+socialspi-prod-task-def.json
 # IDE
 .idea
 .vscode
