@@ -1,11 +1,12 @@
 # Build Stage
-FROM node:18-alpine AS builder
+FROM node:18.19-alpine AS builder
 
 # Install basic shell utilities and set environment
 RUN apk add --no-cache bash
 ENV SHELL=/bin/bash
 ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="${PNPM_HOME}:${PATH}"
+ENV NODE_VERSION=18.19.0
 
 # Install pnpm with specific version matching package.json
 RUN corepack enable && \
@@ -42,7 +43,7 @@ WORKDIR /app/apps/server
 RUN NODE_OPTIONS='--max-old-space-size=4096' pnpm build
 
 # Production Stage
-FROM node:18-alpine AS production
+FROM node:18.19-alpine AS production
 
 # Install Redis
 RUN apk add --no-cache redis
@@ -58,6 +59,11 @@ COPY --from=builder /app/apps/server/dist ./dist
 COPY --from=builder /app/apps/server/package.json ./
 COPY --from=builder /app/packages/common/dist ./node_modules/common/dist
 COPY --from=builder /app/packages/common/package.json ./node_modules/common/
+
+# Install production dependencies including tsconfig-paths
+RUN corepack enable && \
+    corepack prepare pnpm@8.15.4 --activate && \
+    pnpm install --prod
 
 # Set environment variables
 ENV NODE_ENV=production
