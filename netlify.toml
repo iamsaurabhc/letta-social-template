@@ -14,8 +14,10 @@
     cd ../.. && \
     # Build client
     cd apps/client && \
+    rm -rf node_modules && \
+    npm install next && \
     pnpm install --no-frozen-lockfile && \
-    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm build
+    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npx --no-install next build
   """
   publish = "apps/client/.next"
 
