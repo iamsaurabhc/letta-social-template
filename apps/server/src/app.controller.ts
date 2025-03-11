@@ -15,4 +15,13 @@ export class AppController {
       service: 'nestjs-api'
     };
   }
+
+  @Get('ping')
+  getPing() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: 'nestjs-api'
+    };
+  }
 } 

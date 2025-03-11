@@ -65,3 +65,10 @@ jobs:
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+
+    - name: Wait for SSL Certificate Validation
+      run: |
+        aws acm wait certificate-validated \
+          --certificate-arn $(aws acm list-certificates \
+            --query 'CertificateSummaryList[?DomainName==`socialspi.com`].CertificateArn' \
+            --output text)
