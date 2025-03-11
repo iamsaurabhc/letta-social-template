@@ -43,21 +43,37 @@
 
 # Handle Next.js routing
 [[redirects]]
-  from = "/*"
-  to = "/_next/static/:splat"
+  from = "/_next/*"
+  to = "/_next/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.socialspi.com/:splat"
   status = 200
   force = true
-  conditions = {Path = "/_next/static/*"}
+  headers = {Access-Control-Allow-Origin = "*"}
 
+# Handle client-side routing for Next.js app
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Handle API routes by redirecting to external API
-[[redirects]]
-  from = "/*"
-  to = "https://api.socialspi.com/:splat"
-  status = 200
   force = true
-  headers = {Access-Control-Allow-Origin = "*"} 
+
+[functions]
+  # Increase the build timeout
+  node_bundler = "esbuild"
+  included_files = ["apps/client/.next/static/**"]
+
+[dev]
+  framework = "next"
+  targetPort = 3000
+
+[build.processing]
+  skip_processing = false 
