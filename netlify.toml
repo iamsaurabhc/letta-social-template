@@ -2,11 +2,18 @@
   base = "/"
   command = "pnpm install && pnpm build:common && cd apps/client && pnpm build"
   publish = "apps/client/.next"
+  node_version = "18.17.0"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "18.17.0"
   NPM_FLAGS = "--version"
   NEXT_TELEMETRY_DISABLED = "1"
+  PNPM_VERSION = "8.15.4"
+  USE_PNPM = "true"
+
+# Install pnpm before build
+[build.lifecycle]
+  onPreBuild = "npm i -g pnpm@8.15.4"
 
 # Handle Next.js routing
 [[redirects]]
