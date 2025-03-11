@@ -1,25 +1,22 @@
 [build]
   base = "/"
+  package = "apps/client"
   command = """
     # Install global dependencies
     npm i -g pnpm@8.15.4 --force && \
-    npm i -g typescript@5.3.3 && \
-    # Clean install at root
+    # Install root dependencies
     pnpm install --no-frozen-lockfile && \
-    # Build common package first
+    # Build common package
     cd packages/common && \
     pnpm install --no-frozen-lockfile && \
-    npm i typescript@5.3.3 && \
     npx tsc && \
     cd ../.. && \
-    # Install and build client
+    # Build client
     cd apps/client && \
-    npm install next@14.1.0 && \
     pnpm install --no-frozen-lockfile && \
-    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npx next build
+    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm build
   """
   publish = "apps/client/.next"
-  node_version = "18.17.0"
 
 [build.environment]
   NODE_VERSION = "18.17.0"
