@@ -1,16 +1,20 @@
 [build]
   base = "/"
   command = """
+    # Install pnpm globally
     npm i -g pnpm@8.15.4 --force && \
+    # Clean install at root
     pnpm install --no-frozen-lockfile && \
+    # Build common package first
     cd packages/common && \
-    npm install -D typescript@5.3.3 && \
     pnpm install --no-frozen-lockfile && \
-    npm run build && \
+    pnpm build && \
     cd ../.. && \
-    pnpm build:common && \
+    # Install client dependencies
     cd apps/client && \
-    pnpm build
+    pnpm install --no-frozen-lockfile && \
+    # Build client
+    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm build
   """
   publish = "apps/client/.next"
   node_version = "18.17.0"
@@ -23,12 +27,14 @@
   USE_PNPM = "true"
   CI = "true"
 
-# Pre-install step to clean up any conflicting files
+# Ensure clean environment
 [build.lifecycle]
   onPreBuild = """
-    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpx || true && \
-    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm || true && \
-    npm install -g typescript@5.3.3
+    rm -rf node_modules
+    rm -rf packages/common/node_modules
+    rm -rf apps/client/node_modules
+    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpx
+    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm
   """
 
 # Handle Next.js routing

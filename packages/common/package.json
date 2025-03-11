@@ -5,8 +5,8 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-      "build": "npx tsc",
-      "dev": "npx tsc --watch",
+      "build": "tsc --project tsconfig.json",
+      "dev": "tsc --watch",
       "clean": "rm -rf dist"
     },
     "dependencies": {
