@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:18.19-alpine AS builder
+FROM --platform=linux/amd64 node:18.19-alpine AS builder
 
 # Install basic shell utilities and set environment
 RUN apk add --no-cache bash
@@ -43,7 +43,7 @@ WORKDIR /app/apps/server
 RUN NODE_OPTIONS='--max-old-space-size=4096' pnpm build
 
 # Production Stage
-FROM node:18.19-alpine AS production
+FROM --platform=linux/amd64 node:18.19-alpine AS production
 
 # Install Redis
 RUN apk add --no-cache redis
