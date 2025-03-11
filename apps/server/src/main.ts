@@ -42,8 +42,8 @@ async function bootstrap() {
     // Optimize CORS
     const allowedOrigins = [
       'http://localhost:3000',
-      'https://social-auto-agent.vercel.app',
-      'https://social-auto-client.up.railway.app',
+      'https://socialspi.com',
+      'https://*.socialspi.com',
       process.env.NEXT_PUBLIC_CLIENT_URL,
     ].filter(Boolean);
 
