@@ -1,0 +1,30 @@
+[build]
+  base = "/"
+  command = "pnpm install && pnpm build:common && cd apps/client && pnpm build"
+  publish = "apps/client/.next"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--version"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Handle Next.js routing
+[[redirects]]
+  from = "/*"
+  to = "/_next/static/:splat"
+  status = 200
+  force = true
+  conditions = {Path = "/_next/static/*"}
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Handle API routes by redirecting to external API
+[[redirects]]
+  from = "/*"
+  to = "https://api.socialspi.com/:splat"
+  status = 200
+  force = true
+  headers = {Access-Control-Allow-Origin = "*"} 
