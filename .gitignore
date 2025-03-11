@@ -15,6 +15,9 @@ out
 
 cloudformation.yml
 socialspi-prod-task-def.json
+letta-prod-task-def.json
+letta.Dockerfile
+
 # IDE
 .idea
 .vscode
