@@ -4,7 +4,7 @@ import { Controller, Get } from "@nestjs/common";
 export class AppController {
   @Get()
   getHello() {
-    return { message: 'NestJS Server is running!' };
+    return { message: 'SocialSpi Server is running!' };
   }
 
   @Get('health')
@@ -12,7 +12,7 @@ export class AppController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      service: 'nestjs-api'
+      service: 'socialspi-server'
     };
   }
 
@@ -21,7 +21,7 @@ export class AppController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      service: 'nestjs-api'
+      service: 'socialspi-server'
     };
   }
 } 

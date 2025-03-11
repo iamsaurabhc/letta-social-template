@@ -37,7 +37,6 @@ async function bootstrap() {
     }));
 
     app.useGlobalFilters(new GlobalExceptionFilter());
-    app.setGlobalPrefix('api');
     
     // Optimize CORS
     const allowedOrigins = [
