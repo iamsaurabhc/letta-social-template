@@ -14,11 +14,9 @@
     cd ../.. && \
     # Install and build client
     cd apps/client && \
-    rm -rf node_modules/.pnpm/next* && \
+    npm install next@14.1.0 && \
     pnpm install --no-frozen-lockfile && \
-    pnpm add next@14.1.0 && \
-    pnpm exec next telemetry disable && \
-    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm next build
+    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npx next build
   """
   publish = "apps/client/.next"
   node_version = "18.17.0"
@@ -40,7 +38,7 @@
     rm -rf apps/client/node_modules
     rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpx
     rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm
-    npm i -g typescript@5.3.3
+    npm cache clean --force
   """
 
 # Handle Next.js routing
