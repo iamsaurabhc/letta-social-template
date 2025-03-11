@@ -9,7 +9,8 @@
     # Build common package
     cd packages/common && \
     pnpm install --no-frozen-lockfile && \
-    npx tsc && \
+    npm install typescript@5.3.3 --save-dev && \
+    ./node_modules/.bin/tsc && \
     cd ../.. && \
     # Build client
     cd apps/client && \
