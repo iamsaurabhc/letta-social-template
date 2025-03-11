@@ -4,7 +4,9 @@
     npm i -g pnpm@8.15.4 --force && \
     pnpm install --no-frozen-lockfile && \
     cd packages/common && \
+    npm install -D typescript@5.3.3 && \
     pnpm install --no-frozen-lockfile && \
+    npm run build && \
     cd ../.. && \
     pnpm build:common && \
     cd apps/client && \
@@ -25,7 +27,8 @@
 [build.lifecycle]
   onPreBuild = """
     rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpx || true && \
-    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm || true
+    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm || true && \
+    npm install -g typescript@5.3.3
   """
 
 # Handle Next.js routing
