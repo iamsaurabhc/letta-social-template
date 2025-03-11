@@ -3,12 +3,14 @@
   command = """
     # Install pnpm globally
     npm i -g pnpm@8.15.4 --force && \
+    npm i -g typescript@5.3.3 && \
     # Clean install at root
     pnpm install --no-frozen-lockfile && \
     # Build common package first
     cd packages/common && \
     pnpm install --no-frozen-lockfile && \
-    pnpm build && \
+    npm i typescript@5.3.3 && \
+    npx tsc && \
     cd ../.. && \
     # Install client dependencies
     cd apps/client && \
@@ -26,6 +28,7 @@
   PNPM_VERSION = "8.15.4"
   USE_PNPM = "true"
   CI = "true"
+  NODE_OPTIONS = "--max_old_space_size=4096"
 
 # Ensure clean environment
 [build.lifecycle]
@@ -35,6 +38,7 @@
     rm -rf apps/client/node_modules
     rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpx
     rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm
+    npm i -g typescript@5.3.3
   """
 
 # Handle Next.js routing

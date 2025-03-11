@@ -5,8 +5,8 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-      "build": "tsc --project tsconfig.json",
-      "dev": "tsc --watch",
+      "build": "npx tsc",
+      "dev": "npx tsc --watch",
       "clean": "rm -rf dist"
     },
     "dependencies": {
@@ -14,7 +14,7 @@
       "@supabase/ssr": "^0.1.0"
     },
     "devDependencies": {
-      "typescript": "^5.3.3",
+      "typescript": "5.3.3",
       "@types/node": "^20.11.24"
     }
   }
