@@ -1,10 +1,10 @@
 [build]
   base = "/"
   command = """
-    npm i -g pnpm@8.15.4 && \
-    pnpm install && \
+    npm i -g pnpm@8.15.4 --force && \
+    pnpm install --no-frozen-lockfile && \
     cd packages/common && \
-    pnpm install && \
+    pnpm install --no-frozen-lockfile && \
     cd ../.. && \
     pnpm build:common && \
     cd apps/client && \
@@ -19,6 +19,14 @@
   NEXT_TELEMETRY_DISABLED = "1"
   PNPM_VERSION = "8.15.4"
   USE_PNPM = "true"
+  CI = "true"
+
+# Pre-install step to clean up any conflicting files
+[build.lifecycle]
+  onPreBuild = """
+    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpx || true && \
+    rm -f /opt/buildhome/.nvm/versions/node/v18.17.0/bin/pnpm || true
+  """
 
 # Handle Next.js routing
 [[redirects]]
