@@ -1,7 +1,7 @@
 [build]
   base = "/"
   command = """
-    # Install pnpm globally
+    # Install global dependencies
     npm i -g pnpm@8.15.4 --force && \
     npm i -g typescript@5.3.3 && \
     # Clean install at root
@@ -12,11 +12,13 @@
     npm i typescript@5.3.3 && \
     npx tsc && \
     cd ../.. && \
-    # Install client dependencies
+    # Install and build client
     cd apps/client && \
+    rm -rf node_modules/.pnpm/next* && \
     pnpm install --no-frozen-lockfile && \
-    # Build client
-    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm build
+    pnpm add next@14.1.0 && \
+    pnpm exec next telemetry disable && \
+    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm next build
   """
   publish = "apps/client/.next"
   node_version = "18.17.0"
