@@ -17,7 +17,8 @@
     rm -rf node_modules && \
     npm install next && \
     pnpm install --no-frozen-lockfile && \
-    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npx --no-install next build
+    NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 npx --no-install next build && \
+    NODE_ENV=production npx --no-install next start
   """
   publish = "apps/client/.next"
 
@@ -29,6 +30,7 @@
   USE_PNPM = "true"
   CI = "true"
   NODE_OPTIONS = "--max_old_space_size=4096"
+  PORT = "8888"  # Specify port for Next.js
 
 # Ensure clean environment
 [build.lifecycle]
@@ -73,7 +75,14 @@
 
 [dev]
   framework = "next"
-  targetPort = 3000
+  targetPort = 8888
 
 [build.processing]
-  skip_processing = false 
+  skip_processing = false
+
+# Add process type for running the Next.js server
+[build.processing.html]
+  pretty_urls = true
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 
