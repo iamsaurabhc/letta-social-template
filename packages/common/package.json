@@ -2,11 +2,11 @@
     "name": "common",
     "version": "1.0.0",
     "private": true,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "scripts": {
       "build": "tsc",
-      "dev": "tsc -w",
+      "dev": "tsc --watch",
       "clean": "rm -rf dist"
     },
     "dependencies": {
@@ -15,6 +15,6 @@
     },
     "devDependencies": {
       "typescript": "^5.3.3",
-      "@types/node": "^20.11.19"
+      "@types/node": "^20.11.24"
     }
   }
