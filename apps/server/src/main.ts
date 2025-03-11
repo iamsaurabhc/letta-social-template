@@ -10,7 +10,7 @@ let app;
 // Optimize bootstrap for faster cold starts
 async function bootstrap() {
   if (!app) {
-    // Set max memory limit
+    // Memory settings look good for production
     const memoryLimit = process.env.NODE_ENV === 'production' ? 4096 : 2048;
     process.env.NODE_OPTIONS = `--max-old-space-size=${memoryLimit}`;
 
@@ -19,7 +19,7 @@ async function bootstrap() {
       bufferLogs: true,
     });
     
-    // Enable GC
+    // GC settings look good
     if (global.gc) {
       setInterval(() => {
         try {
@@ -27,22 +27,15 @@ async function bootstrap() {
         } catch (e) {
           console.error('Failed to run garbage collection:', e);
         }
-      }, 30000); // Run GC every 30 seconds
+      }, 30000);
     }
 
-    app.useGlobalPipes(new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }));
-
-    app.useGlobalFilters(new GlobalExceptionFilter());
-    
-    // Optimize CORS
+    // Update CORS settings for api subdomain
     const allowedOrigins = [
       'http://localhost:3000',
       'https://socialspi.com',
-      'https://*.socialspi.com',
+      'https://www.socialspi.com',  // Explicitly add www
+      'https://*.socialspi.com',    // Keep wildcard for other subdomains
       process.env.NEXT_PUBLIC_CLIENT_URL,
     ].filter(Boolean);
 
@@ -50,16 +43,25 @@ async function bootstrap() {
       origin: allowedOrigins,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
       credentials: true,
-      maxAge: 86400, // Cache CORS preflight for 24 hours
+      maxAge: 86400,
     });
+
+    // Validation and error handling look good
+    app.useGlobalPipes(new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }));
+
+    app.useGlobalFilters(new GlobalExceptionFilter());
 
     await app.init();
     logger.log('NestJS application initialized');
 
-    // Start listening if in local development
+    // Update port listening logic
     if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
       const port = process.env.PORT || 8080;
-      await app.listen(port);
+      await app.listen(port, '0.0.0.0');  // Explicitly bind to all interfaces
       logger.log(`Server listening on port ${port}`);
     }
   }
