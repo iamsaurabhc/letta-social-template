@@ -12,7 +12,7 @@
     pnpm install --no-frozen-lockfile && \
     next build
   """
-  publish = "apps/client/.next"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18.17.0"
@@ -63,7 +63,7 @@
 [functions]
   # Increase the build timeout
   node_bundler = "esbuild"
-  included_files = ["apps/client/.next/static/**"]
+  included_files = [".next/static/**"]
 
 [dev]
   framework = "next"
