@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['common'],
-  output: 'export',
+  output: 'standalone',
   experimental: {
     workerThreads: false,
     cpus: 1
